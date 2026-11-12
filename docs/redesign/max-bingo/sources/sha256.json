@@ -1,0 +1,87 @@
+[
+  {
+    "file": "game_3d.html",
+    "bytes": 40509,
+    "sha256": "64e36d249f15cc81e9b86f638fd8b4c39c0f4b08034fa06f3c243a6bb99c7680"
+  },
+  {
+    "file": "game_3dp.html",
+    "bytes": 18178,
+    "sha256": "dd2437d40a2732e0bacc079b10e2ddc12b0b73d3eaeecf692f1470d0f1336c69"
+  },
+  {
+    "file": "max3d-2026-05.png",
+    "bytes": 1404354,
+    "sha256": "670a902e421c6683a162a31ffac6c8c80be40b22ca0a1d050e45122af014c24c"
+  },
+  {
+    "file": "max3d-2026.pdf",
+    "bytes": 4614276,
+    "sha256": "667526330af74b090af00531931e8ac09ac358745acc17043b45d663798e819d"
+  },
+  {
+    "file": "max3dpro-2022-09.png",
+    "bytes": 1129305,
+    "sha256": "bbe33805949e75e5682f2dce4eb895438cb817b0cbadbbd9f6f93cc508a9ebd9"
+  },
+  {
+    "file": "max3dpro-2022-10.png",
+    "bytes": 1363136,
+    "sha256": "d1f4cff917d9c3e6b8ff1b8562168fe1575260e14ee127ad6090d40bce785cb3"
+  },
+  {
+    "file": "max3dpro-2022.pdf",
+    "bytes": 8633073,
+    "sha256": "e2dfbf0e295c9ea6c0aa74e83863429f77d8db1b10ebe48367ceece483a45b7d"
+  },
+  {
+    "file": "max3dpro-2026-04.png",
+    "bytes": 1131545,
+    "sha256": "e5c6160a5a56be89ad7c3586e5353ba784024c0d3fb2d55707622c39dd12be2b"
+  },
+  {
+    "file": "max3dpro-2026-05.png",
+    "bytes": 1109838,
+    "sha256": "c784c1c1fd82c60834f2d2134a7900c725fea43a90faf07f14026089e7deae66"
+  },
+  {
+    "file": "max3dpro-2026-07.png",
+    "bytes": 1080722,
+    "sha256": "1016b521b9c21b243c4349badcee23b7ee26cf36008f194e9d1ae3be06ba3ac5"
+  },
+  {
+    "file": "max3dpro-2026.pdf",
+    "bytes": 4496617,
+    "sha256": "5f61e0c9fb8d8ef86694d87893460d3d200342eef520c0ae9d324f3f75d28c26"
+  },
+  {
+    "file": "max3dpro-demo-Result.js",
+    "bytes": 61419,
+    "sha256": "b48dbd83c50281443df4ff44a7b9691d70c1e5ecf8c47b7b4482d2a327c96ac3"
+  },
+  {
+    "file": "max3dpro-demo.html",
+    "bytes": 451,
+    "sha256": "31e9d2f966512fb5d71a5f3311c8fa191f4560706fad961805036ef0c5808e5d"
+  },
+  {
+    "file": "the-le-max-3d.pdf",
+    "bytes": 284701,
+    "sha256": "2bae274cfae6cacb969045947b427d74b865ce64f5b62e273ed8c4606ff7809a"
+  },
+  {
+    "file": "vietlott-max3d-gioi-thieu.html",
+    "bytes": 40025,
+    "sha256": "540922423ac414761b486f3bd90750177055ae0f2760c69d5a66865f183279ff"
+  },
+  {
+    "file": "vietlott-max3dpro-cach-choi.html",
+    "bytes": 41205,
+    "sha256": "f1b5cf32f6326831a9407a2345f08072db10ea489fcbfce6dd9a890cc208c46d"
+  },
+  {
+    "file": "vietlott-max3dpro-gioi-thieu.html",
+    "bytes": 43070,
+    "sha256": "30e31ce681612a66b13b521db5c63a651a4bb73cdde521f75b8c919aa0ce12aa"
+  }
+]

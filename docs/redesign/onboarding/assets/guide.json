@@ -1,0 +1,840 @@
+{
+  "copy": {
+    "vi": {
+      "review": "Bản xem trước LottoLens",
+      "dark": "Giao diện tối",
+      "light": "Giao diện sáng",
+      "language": "English",
+      "reset": "Mô phỏng lần đầu",
+      "brand": "Lịch sử & xác suất",
+      "count": "100 kỳ mẫu",
+      "guide": "Hướng dẫn trò chơi",
+      "help": "Trợ giúp",
+      "tour": "Hướng dẫn sử dụng",
+      "step": "Bước",
+      "skip": "Bỏ qua",
+      "back": "Quay lại",
+      "next": "Tiếp theo",
+      "done": "Bắt đầu",
+      "exit": "Đã thoát bản xem trước.",
+      "reopen": "Mở lại LottoLens",
+      "nav": [
+        "Tổng quan",
+        "Lịch sử",
+        "Thống kê",
+        "Xác suất",
+        "Bộ số tham khảo",
+        "Kiểm chứng",
+        "AI & cấu hình",
+        "Cài đặt"
+      ],
+      "steps": [
+        [
+          "Chọn trò và tải lịch sử",
+          "Mở Tổng quan để tải dữ liệu của trò bạn muốn xem.",
+          [
+            "Chọn trò trên thanh trên cùng.",
+            "Bấm Cập nhật lịch sử."
+          ],
+          "Ảnh minh họa dùng dữ liệu mẫu."
+        ],
+        [
+          "Đọc kết quả từng kỳ",
+          "Trang Lịch sử hiển thị mã kỳ, ngày quay, bộ số và nguồn đối chiếu.",
+          [
+            "Tìm theo mã kỳ hoặc số.",
+            "Đọc bộ số và mở nguồn ở cùng dòng."
+          ],
+          "Nút Hướng dẫn trò chơi ở thanh trên mở thể lệ của trò đang chọn."
+        ],
+        [
+          "Xem thống kê xuất hiện",
+          "So sánh tần suất xuất hiện của các số trong khoảng lịch sử đã chọn.",
+          [
+            "Chọn khoảng dữ liệu.",
+            "Đọc tần suất trên bản đồ nhiệt."
+          ],
+          "Tần suất quá khứ không dự báo kỳ quay tiếp theo."
+        ],
+        [
+          "Đọc xác suất lý thuyết",
+          "Trang Xác suất trình bày khả năng trúng theo luật của trò.",
+          [
+            "Đọc hạng giải, phân số chính xác và tỷ lệ phần trăm."
+          ],
+          "Với Keno, bảng hiển thị xác suất theo số lượng khớp của bậc đang chọn."
+        ],
+        [
+          "Tạo bộ số tham khảo",
+          "Chọn cách tạo số rồi xem bộ số và phần giải thích.",
+          [
+            "Chọn phương pháp.",
+            "Bấm Tạo bộ số tham khảo."
+          ],
+          "Các bộ số dùng để tham khảo, không bảo đảm trúng thưởng."
+        ],
+        [
+          "Kiểm chứng phương pháp",
+          "Với trò hỗ trợ, app dùng các kỳ trước để kiểm chứng phương pháp trên kỳ sau.",
+          [
+            "Chọn phương pháp cần kiểm chứng.",
+            "Bấm Chạy kiểm chứng và xem báo cáo."
+          ],
+          "Báo cáo đối chiếu với chọn ngẫu nhiên trên cùng lịch sử."
+        ],
+        [
+          "Cấu hình AI khi cần",
+          "Thiết lập nhà cung cấp nếu bạn muốn dùng các tính năng AI.",
+          [
+            "Nhập Base URL và API key của nhà cung cấp.",
+            "Bấm Tải danh sách model.",
+            "Chọn model trong danh sách hoặc nhập tên thủ công.",
+            "Bấm Test model để tự chọn endpoint và kiểm tra kết nối."
+          ],
+          "Chỉ đổi endpoint khi không hỗ trợ (404/405), tối đa 3 đường dẫn. Không thử lại lỗi key/model/mạng. Yêu cầu AI có thể tính phí."
+        ],
+        [
+          "Bật lịch cập nhật tự động",
+          "Mở Cài đặt → Lịch sử & tự cập nhật để đặt lịch riêng từng trò.",
+          [
+            "Bật Tự động cho trò muốn cập nhật.",
+            "Chọn giờ theo giờ Việt Nam.",
+            "Bấm Lưu cài đặt ở cuối trang."
+          ],
+          "Lịch Windows chạy cả khi LottoLens đóng nếu máy bật và bạn đã đăng nhập."
+        ]
+      ]
+    },
+    "en": {
+      "review": "LottoLens preview",
+      "dark": "Dark theme",
+      "light": "Light theme",
+      "language": "Tiếng Việt",
+      "reset": "Replay first launch",
+      "brand": "History & odds",
+      "count": "100 sample draws",
+      "guide": "Game guide",
+      "help": "Help",
+      "tour": "Getting started",
+      "step": "Step",
+      "skip": "Skip",
+      "back": "Back",
+      "next": "Next",
+      "done": "Get started",
+      "exit": "The preview is closed.",
+      "reopen": "Reopen LottoLens",
+      "nav": [
+        "Overview",
+        "History",
+        "Statistics",
+        "Odds",
+        "Number suggestions",
+        "Validation",
+        "AI & settings",
+        "Settings"
+      ],
+      "steps": [
+        [
+          "Choose a game and update history",
+          "Open Overview to load results for the game you want to explore.",
+          [
+            "Choose a game in the top bar.",
+            "Click Update history."
+          ],
+          "The preview uses sample data."
+        ],
+        [
+          "Read draw results",
+          "History shows the draw ID, date, numbers and source.",
+          [
+            "Search by draw ID or number.",
+            "Read the numbers and open the source in the same row."
+          ],
+          "Game guide in the top bar opens the rules for the selected game."
+        ],
+        [
+          "Explore number frequencies",
+          "Compare how often numbers appeared in the selected history window.",
+          [
+            "Choose a history window.",
+            "Read the frequencies on the heatmap."
+          ],
+          "Past frequencies do not predict the next draw."
+        ],
+        [
+          "Read theoretical odds",
+          "Odds shows prize probabilities under the rules of the selected game.",
+          [
+            "Read the prize tier, exact fraction and percentage."
+          ],
+          "For Keno, the table shows match-count probabilities for the selected tier."
+        ],
+        [
+          "Generate number suggestions",
+          "Choose a method and review the suggested numbers and explanation.",
+          [
+            "Choose a method.",
+            "Click Generate number suggestions."
+          ],
+          "Suggestions are for reference and do not guarantee a win."
+        ],
+        [
+          "Validate a method",
+          "For supported games, use earlier draws to test a method against later results.",
+          [
+            "Choose a method to validate.",
+            "Run validation and read the report."
+          ],
+          "The report compares the method with random selection on the same history."
+        ],
+        [
+          "Set up AI if needed",
+          "Configure a provider if you want to use the AI features.",
+          [
+            "Enter the provider’s base URL and API key.",
+            "Click Fetch models.",
+            "Choose a model from the list or enter its name manually.",
+            "Click Test model to select an endpoint automatically and check the connection."
+          ],
+          "Only unsupported endpoints (404/405) permit switching, up to 3 paths. No retries for key/model/network errors. AI requests may incur charges."
+        ],
+        [
+          "Schedule automatic updates",
+          "Open Settings → History & automatic updates to schedule each game.",
+          [
+            "Enable automatic updates for a game.",
+            "Choose a time in Vietnam time.",
+            "Click Save settings at the bottom."
+          ],
+          "Windows can run the schedule while LottoLens is closed if the PC is on and you are signed in."
+        ]
+      ]
+    }
+  },
+  "shots": {
+    "vi-dark-overview": {
+      "width": 2625,
+      "height": 750,
+      "marks": [
+        [
+          1470,
+          15,
+          372,
+          102
+        ],
+        [
+          2202,
+          228,
+          408,
+          102
+        ]
+      ]
+    },
+    "vi-dark-history": {
+      "width": 2625,
+      "height": 951,
+      "marks": [
+        [
+          75,
+          300,
+          1551,
+          102
+        ],
+        [
+          42,
+          618,
+          2520,
+          144
+        ]
+      ]
+    },
+    "vi-dark-stats": {
+      "width": 2625,
+      "height": 1272,
+      "marks": [
+        [
+          2097,
+          42,
+          489,
+          102
+        ],
+        [
+          87,
+          819,
+          1455,
+          420
+        ]
+      ]
+    },
+    "vi-dark-odds": {
+      "width": 2625,
+      "height": 1062,
+      "marks": [
+        [
+          93,
+          504,
+          1443,
+          426
+        ]
+      ]
+    },
+    "vi-dark-suggest": {
+      "width": 2625,
+      "height": 1377,
+      "marks": [
+        [
+          87,
+          456,
+          1350,
+          102
+        ],
+        [
+          87,
+          1227,
+          495,
+          102
+        ]
+      ]
+    },
+    "vi-dark-verify": {
+      "width": 2625,
+      "height": 1170,
+      "marks": [
+        [
+          87,
+          456,
+          1350,
+          102
+        ],
+        [
+          87,
+          975,
+          432,
+          102
+        ]
+      ]
+    },
+    "vi-dark-ai": {
+      "width": 1584,
+      "height": 1194,
+      "marks": [
+        [
+          60,
+          750,
+          1350,
+          102
+        ],
+        [
+          1065,
+          228,
+          465,
+          102
+        ],
+        [
+          60,
+          366,
+          1470,
+          102
+        ],
+        [
+          438,
+          1047,
+          324,
+          102
+        ]
+      ]
+    },
+    "vi-dark-auto": {
+      "width": 1254,
+      "height": 498,
+      "marks": [
+        [
+          54,
+          162,
+          360,
+          96
+        ],
+        [
+          936,
+          153,
+          264,
+          114
+        ],
+        [
+          882,
+          360,
+          327,
+          102
+        ]
+      ]
+    },
+    "vi-light-overview": {
+      "width": 2625,
+      "height": 750,
+      "marks": [
+        [
+          1470,
+          15,
+          372,
+          102
+        ],
+        [
+          2202,
+          228,
+          408,
+          102
+        ]
+      ]
+    },
+    "vi-light-history": {
+      "width": 2625,
+      "height": 951,
+      "marks": [
+        [
+          75,
+          300,
+          1551,
+          102
+        ],
+        [
+          42,
+          618,
+          2520,
+          144
+        ]
+      ]
+    },
+    "vi-light-stats": {
+      "width": 2625,
+      "height": 1272,
+      "marks": [
+        [
+          2097,
+          42,
+          489,
+          102
+        ],
+        [
+          87,
+          819,
+          1455,
+          420
+        ]
+      ]
+    },
+    "vi-light-odds": {
+      "width": 2625,
+      "height": 1062,
+      "marks": [
+        [
+          93,
+          504,
+          1443,
+          426
+        ]
+      ]
+    },
+    "vi-light-suggest": {
+      "width": 2625,
+      "height": 1377,
+      "marks": [
+        [
+          87,
+          456,
+          1350,
+          102
+        ],
+        [
+          87,
+          1227,
+          495,
+          102
+        ]
+      ]
+    },
+    "vi-light-verify": {
+      "width": 2625,
+      "height": 1170,
+      "marks": [
+        [
+          87,
+          456,
+          1350,
+          102
+        ],
+        [
+          87,
+          975,
+          432,
+          102
+        ]
+      ]
+    },
+    "vi-light-ai": {
+      "width": 1584,
+      "height": 1194,
+      "marks": [
+        [
+          60,
+          750,
+          1350,
+          102
+        ],
+        [
+          1065,
+          228,
+          465,
+          102
+        ],
+        [
+          60,
+          366,
+          1470,
+          102
+        ],
+        [
+          438,
+          1047,
+          324,
+          102
+        ]
+      ]
+    },
+    "vi-light-auto": {
+      "width": 1254,
+      "height": 498,
+      "marks": [
+        [
+          54,
+          162,
+          360,
+          96
+        ],
+        [
+          936,
+          153,
+          264,
+          114
+        ],
+        [
+          882,
+          360,
+          327,
+          102
+        ]
+      ]
+    },
+    "en-dark-overview": {
+      "width": 2625,
+      "height": 750,
+      "marks": [
+        [
+          1644,
+          15,
+          372,
+          102
+        ],
+        [
+          2220,
+          228,
+          390,
+          102
+        ]
+      ]
+    },
+    "en-dark-history": {
+      "width": 2625,
+      "height": 951,
+      "marks": [
+        [
+          75,
+          300,
+          1410,
+          102
+        ],
+        [
+          42,
+          618,
+          2520,
+          144
+        ]
+      ]
+    },
+    "en-dark-stats": {
+      "width": 2625,
+      "height": 1272,
+      "marks": [
+        [
+          2067,
+          42,
+          519,
+          102
+        ],
+        [
+          87,
+          819,
+          1455,
+          420
+        ]
+      ]
+    },
+    "en-dark-odds": {
+      "width": 2625,
+      "height": 1062,
+      "marks": [
+        [
+          93,
+          504,
+          1443,
+          426
+        ]
+      ]
+    },
+    "en-dark-suggest": {
+      "width": 2625,
+      "height": 1377,
+      "marks": [
+        [
+          87,
+          456,
+          1332,
+          102
+        ],
+        [
+          87,
+          1227,
+          504,
+          102
+        ]
+      ]
+    },
+    "en-dark-verify": {
+      "width": 2625,
+      "height": 1182,
+      "marks": [
+        [
+          87,
+          468,
+          1350,
+          102
+        ],
+        [
+          87,
+          987,
+          384,
+          102
+        ]
+      ]
+    },
+    "en-dark-ai": {
+      "width": 1584,
+      "height": 1194,
+      "marks": [
+        [
+          60,
+          750,
+          1350,
+          102
+        ],
+        [
+          1179,
+          228,
+          351,
+          102
+        ],
+        [
+          60,
+          366,
+          1470,
+          102
+        ],
+        [
+          444,
+          1047,
+          324,
+          102
+        ]
+      ]
+    },
+    "en-dark-auto": {
+      "width": 1254,
+      "height": 498,
+      "marks": [
+        [
+          54,
+          162,
+          360,
+          96
+        ],
+        [
+          936,
+          153,
+          264,
+          114
+        ],
+        [
+          849,
+          360,
+          360,
+          102
+        ]
+      ]
+    },
+    "en-light-overview": {
+      "width": 2625,
+      "height": 750,
+      "marks": [
+        [
+          1644,
+          15,
+          372,
+          102
+        ],
+        [
+          2220,
+          228,
+          390,
+          102
+        ]
+      ]
+    },
+    "en-light-history": {
+      "width": 2625,
+      "height": 951,
+      "marks": [
+        [
+          75,
+          300,
+          1410,
+          102
+        ],
+        [
+          42,
+          618,
+          2520,
+          144
+        ]
+      ]
+    },
+    "en-light-stats": {
+      "width": 2625,
+      "height": 1272,
+      "marks": [
+        [
+          2067,
+          42,
+          519,
+          102
+        ],
+        [
+          87,
+          819,
+          1455,
+          420
+        ]
+      ]
+    },
+    "en-light-odds": {
+      "width": 2625,
+      "height": 1062,
+      "marks": [
+        [
+          93,
+          504,
+          1443,
+          426
+        ]
+      ]
+    },
+    "en-light-suggest": {
+      "width": 2625,
+      "height": 1377,
+      "marks": [
+        [
+          87,
+          456,
+          1332,
+          102
+        ],
+        [
+          87,
+          1227,
+          504,
+          102
+        ]
+      ]
+    },
+    "en-light-verify": {
+      "width": 2625,
+      "height": 1182,
+      "marks": [
+        [
+          87,
+          468,
+          1350,
+          102
+        ],
+        [
+          87,
+          987,
+          384,
+          102
+        ]
+      ]
+    },
+    "en-light-ai": {
+      "width": 1584,
+      "height": 1194,
+      "marks": [
+        [
+          60,
+          750,
+          1350,
+          102
+        ],
+        [
+          1179,
+          228,
+          351,
+          102
+        ],
+        [
+          60,
+          366,
+          1470,
+          102
+        ],
+        [
+          444,
+          1047,
+          324,
+          102
+        ]
+      ]
+    },
+    "en-light-auto": {
+      "width": 1254,
+      "height": 498,
+      "marks": [
+        [
+          54,
+          162,
+          360,
+          96
+        ],
+        [
+          936,
+          153,
+          264,
+          114
+        ],
+        [
+          849,
+          360,
+          360,
+          102
+        ]
+      ]
+    }
+  }
+}

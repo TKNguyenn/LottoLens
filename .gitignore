@@ -1,0 +1,47 @@
+__pycache__/
+*.pyc
+.pytest_cache/
+config.json
+window_geometry.bin
+*.sqlite3
+*.sqlite3-*
+work/
+build/
+dist/
+
+# Local settings and application data
+/ui_preferences.json
+/theme.json
+/data/
+source-cache/
+policy-acceptance.txt
+onboarding-v1.txt
+.env
+.env.*
+!.env.example
+*.log
+*.pem
+*.key
+*.pfx
+
+# Local editor, capture and planning files
+/.vscode/
+/.playwright-mcp/
+/.redesign-work/
+/implementation_handoff.md
+/plan.md
+/task.md
+**/reviews/
+/docs/redesign/gradient/native-expanded/
+/docs/redesign/gradient/native-compact/
+/docs/redesign/preview-*.png
+/docs/redesign/gradient/preview-*.png
+
+# Keep source references; avoid republishing downloaded third-party documents.
+/docs/redesign/max-bingo/sources/*.pdf
+/docs/redesign/max-bingo/sources/*.png
+
+# Only the selected app artwork is needed for source builds.
+/docs/redesign/assets/generated/*
+!/docs/redesign/assets/generated/07-ticket-gold.ico
+!/docs/redesign/assets/generated/07-ticket-gold.png

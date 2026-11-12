@@ -1,0 +1,63 @@
+{
+  "source_sha256": "8a8ae4b0ba3ec28bf0e69a85d5b718ccb33620d4c9b593b02a6a001122cbd9e6",
+  "seed": 733,
+  "history_count": 130,
+  "cases": {
+    "mega": {
+      "uniform_v1": {
+        "profile_hash": "fba48ce79130cc623d63eb52eb1e826a144041d91cb48b241f4bc8def5c67468",
+        "tickets_hash": "14203b8568340ca49005d99009bd761bf6c0830ec69876e1016e45160679c588"
+      },
+      "frequency90_laplace1_v1": {
+        "profile_hash": "0906553f0d2b180abdfbf8883fc545d29766dadfc6ace8621296694402fe612d",
+        "tickets_hash": "20f410f5aa7fcb880f49a651fac3e2b8fe73db8251116e1618346a93a9091a16"
+      },
+      "bayes90_v1": {
+        "profile_hash": "2b9c73f821ad070efc076c6abb1898dfcd5a6aa5cf742ec357ac2eaf15fcb770",
+        "tickets_hash": "acaa480a69850ec97f564f4eaad4b454b4812f7abb10a564379a7a0d3a10e15c"
+      }
+    },
+    "power": {
+      "uniform_v1": {
+        "profile_hash": "1b39d9234408626590971fc41fc61591c6178f34a9abe8d0273270acb5e5bf13",
+        "tickets_hash": "a2bbe9b9ea217ede7c1d8ee7875475fc79061db887e88b1feac4ff58b024cc6c"
+      },
+      "frequency90_laplace1_v1": {
+        "profile_hash": "553f62b8b45032f3cb71c24b5d320fac62ea3606428a0b5edcdb9439100b3e04",
+        "tickets_hash": "9f22de26c94ae9c9bfee524fa19a948c2d15726b8df12ddac269c26ff39e71c8"
+      },
+      "bayes90_v1": {
+        "profile_hash": "e804a1eb7f6c1d3209cde314e4a688119d3b9813f9d2cd09415e05063ff6264e",
+        "tickets_hash": "e89dcf32fa747fc812414d2bbab27bb7f829a84e611cfa1c8bb7592ca85707da"
+      }
+    },
+    "lotto": {
+      "uniform_v1": {
+        "profile_hash": "31ce6585c1b12416a169d0954d17a2dfd4094634413b2b8843ae46bb7c46aa69",
+        "tickets_hash": "83635d8e8c99279ca77ed6d9b4f4359deb365a826f2ab2929b24d261d6a3b76a"
+      },
+      "frequency90_laplace1_v1": {
+        "profile_hash": "5f83773b57930ed4e1b719b03fd10a0f163067c8ca4b16317476bf8e5c65bf09",
+        "tickets_hash": "6148337908b6d8f78cc01c538d5f050539e4310f2e88eecaa0b243df87877f9a"
+      },
+      "bayes90_v1": {
+        "profile_hash": "f9857cd8c4c74c4d3e934a20d504823722fd47f38dc86c2c9f4500e73f01696b",
+        "tickets_hash": "112ccae580127d805b22aba8718a86e15e71a1e41a820e5fb3af175908cf8198"
+      }
+    },
+    "keno": {
+      "uniform_v1": {
+        "profile_hash": "0fcd5717dca0607764c3dfebd78951225c5f39aa165a039bed2f41d2f4ee8490",
+        "tickets_hash": "f6d9f600a3396f6564d46a91e5db12218a2fd210926faecdfbd787d8ff8bcc5d"
+      },
+      "frequency90_laplace1_v1": {
+        "profile_hash": "eedfcc6a22f26a81f5be5b5a5ffdca9480c8f752aa903378f58d99cd909cebd0",
+        "tickets_hash": "f88955017e449447e47675bdda973136092ba21107b73bc7e9bb94850a790b69"
+      },
+      "bayes90_v1": {
+        "profile_hash": "e559915ac2a588d54b3956323ae93631d568ceb32ef05f77ac9a212eae08f99a",
+        "tickets_hash": "f019c8955eb8197d481533dece62bf83e3a942bfd682974e67b95929f53d343e"
+      }
+    }
+  }
+}
