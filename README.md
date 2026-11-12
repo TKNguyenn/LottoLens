@@ -108,17 +108,19 @@ App tự chọn Responses → Chat Completions → Completions, chỉ chuyển k
 
 ## Các trò được hỗ trợ
 
-| Trò | Xác suất và bộ tham khảo | Kiểm chứng theo hạng giải |
-| --- | --- | --- |
-| Mega 6/45 | Có | Có |
-| Power 6/55 | Có, tách bonus | Có |
-| Lotto 5/35 | Có, tách số đặc biệt | Có |
-| Keno chọn 1–10 | Phân phối số trùng và bộ tham khảo | Chưa bật |
-| Max 3D | Vé một bộ `000–999`, xác suất sự kiện | Chưa bật |
-| Max 3D Pro | Hai bộ có thứ tự, cho phép cặp trùng | Chưa bật |
-| Bingo18 | Đủ 38 lựa chọn trong các nhóm được mô hình hóa | Chưa bật |
+Cả 7 trò đều có lịch sử, thống kê, xác suất lý thuyết và bộ số tham khảo cho các cách chơi bên dưới.
 
-Keno chưa có bảng xác suất tiền thưởng đầy đủ. Max/Bingo chưa mở mô phỏng, backtest hoặc tiền thưởng/EV đầy đủ. Chơi bao và Max 3D+ chưa có engine riêng. Luật là mô hình quan sát, không chứng nhận hiệu lực lịch sử cho mọi kỳ cũ. Xem [ma trận hỗ trợ](docs/game_support_matrix.md) và [nguồn kiểm chứng luật](docs/source_audit.md).
+| Trò | Phạm vi xác suất và bộ tham khảo | Mô phỏng kỳ quay | Kiểm chứng trên lịch sử theo hạng giải |
+| --- | --- | --- | --- |
+| Mega 6/45 | Vé cơ bản | Có | Có |
+| Power 6/55 | Vé cơ bản, tính riêng số bonus | Có | Có |
+| Lotto 5/35 | Vé cơ bản, tính riêng số đặc biệt | Có | Có |
+| Keno chọn 1–10 | Vé chọn 1–10 số, xác suất theo số lượng trùng | Theo số lượng trùng | Chưa hỗ trợ |
+| Max 3D | Vé một bộ `000–999`, xác suất theo sự kiện trúng | Chưa hỗ trợ | Chưa hỗ trợ |
+| Max 3D Pro | Vé hai bộ có thứ tự, cho phép hai bộ giống nhau | Chưa hỗ trợ | Chưa hỗ trợ |
+| Bingo18 | Đủ 38 lựa chọn trong các nhóm được mô hình hóa | Chưa hỗ trợ | Chưa hỗ trợ |
+
+**Mô phỏng** tạo các kỳ quay giả lập. **Kiểm chứng** đánh giá phương pháp chọn số trên các kỳ đã lưu. Keno mô phỏng theo số lượng trùng và chưa tính đủ xác suất nhận thưởng. Chơi bao và Max 3D+ chưa có mô hình riêng. Xem [ma trận hỗ trợ](docs/game_support_matrix.md) và [nguồn kiểm chứng luật](docs/source_audit.md).
 
 ## Dữ liệu được lưu ở đâu?
 

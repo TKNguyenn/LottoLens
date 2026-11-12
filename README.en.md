@@ -108,17 +108,19 @@ The app selects Responses → Chat Completions → Completions, switching only o
 
 ## Supported games
 
-| Game | Probabilities and suggestions | Prize-tier backtesting |
-| --- | --- | --- |
-| Mega 6/45 | Supported | Supported |
-| Power 6/55 | Supported, separate bonus number | Supported |
-| Lotto 5/35 | Supported, separate special number | Supported |
-| Keno pick 1–10 | Match-count distribution and suggestions | Not enabled |
-| Max 3D | Single `000–999` ticket, event probabilities | Not enabled |
-| Max 3D Pro | Ordered pair of triples, repeated pairs allowed | Not enabled |
-| Bingo18 | All 38 choices within the modeled play groups | Not enabled |
+All seven games support draw history, statistics, theoretical probabilities and number suggestions for the play types below.
 
-Keno does not yet provide complete payout odds. Max/Bingo simulation, backtesting and full payout/EV calculations are not enabled. System-entry variants and Max 3D+ need separate engines. Rules are observed models, not certified historical coverage for every past draw. See the [support matrix](docs/game_support_matrix.md) and [source audit](docs/source_audit.md) (Vietnamese).
+| Game | Scope of probabilities and suggestions | Draw simulation | Prize-tier backtesting on saved history |
+| --- | --- | --- | --- |
+| Mega 6/45 | Standard ticket | Supported | Supported |
+| Power 6/55 | Standard ticket with separate bonus-number calculation | Supported | Supported |
+| Lotto 5/35 | Standard ticket with separate special-number calculation | Supported | Supported |
+| Keno pick 1–10 | Pick 1–10 tickets, probabilities by match count | By match count | Not yet supported |
+| Max 3D | Single `000–999` ticket, winning-event probabilities | Not yet supported | Not yet supported |
+| Max 3D Pro | Ordered pair of triples, identical triples allowed | Not yet supported | Not yet supported |
+| Bingo18 | All 38 choices within the modeled play groups | Not yet supported | Not yet supported |
+
+**Simulation** generates synthetic draws. **Backtesting** evaluates a number-selection method on saved draws. Keno simulation groups outcomes by match count and does not yet model all payout odds. System-entry variants and Max 3D+ need separate models. See the [support matrix](docs/game_support_matrix.md) and [source audit](docs/source_audit.md) (Vietnamese).
 
 ## Where is data stored?
 

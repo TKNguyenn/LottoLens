@@ -7,7 +7,7 @@ Ngày cập nhật 2026-11-12. Danh mục lấy từ website chính thức Vietl
 | mega / normal | Có, trang và AJAX kỳ cũ | Có | Hạng giải, Fraction | Đồng đều, tần suất và Bayes 90 kỳ | Có core | Chưa xác minh toàn bộ thời gian hiệu lực luật; tiền lịch sử giữ unknown |
 | power / normal | Có, tách 6 số chính/bonus | Có, bonus riêng | Hạng giải, tách Jackpot 2 | Có core | Có core | Jackpot/chia thưởng, thuế và lịch sử hiệu lực luật chưa đầy đủ |
 | lotto / normal | Có, tách 5 số chính/số đặc biệt | Có | 5/35 × 1/12, hạng giải | Có core | Có core | Chia Độc Đắc/tiền lịch sử giữ unknown; không giả là tiền cố định mọi kỳ |
-| keno / pick1–pick10 | Có, phân trang theo ngày | Có tần suất số chính | Phân phối số lượng khớp, chưa phân hạng giải | Có core | Chưa bật hạng giải | Chờ xác minh đầy đủ bảng trả thưởng/giới hạn chia giải |
+| keno / pick1–pick10 | Có, phân trang theo ngày | Có tần suất số chính | Phân phối số lượng trùng | Có | Có mô phỏng số lượng trùng. Chưa hỗ trợ backtest theo hạng giải | Chờ xác minh đầy đủ bảng trả thưởng và giới hạn chia giải |
 | keno / chơi bổ sung | Dùng kết quả Keno | Chưa hoàn thiện cho cược phụ | Chưa bật | Chưa bật | Chưa bật | Cần từng luật bổ sung, không dùng công thức pickN thay thế |
 | max3d / normal | Có, giữ nhóm giải 2/4/6/8 và số 0 đầu | Tần suất chuỗi | Fraction từng hạng + hợp/không trúng, có hoàn lại | Đồng đều/tần suất/Bayes/AI | Chưa bật | Xác suất sự kiện, chưa tính tiền thưởng khi lặp; AI giữ cap10.000ký tự |
 | max3d / Max 3D+ | Dùng kết quả Max 3D | Chưa có phân tích vé hai bộ | Chưa bật | Chưa bật | Chưa bật | Cần luật/vé hai bộ; không đồng nhất với một bộ Max 3D |
