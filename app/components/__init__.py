@@ -2,7 +2,7 @@
 from math import ceil
 import json
 
-from PySide6.QtCore import QRectF, QSize, Qt, QUrl, Signal
+from PySide6.QtCore import QEasingCurve, QRectF, QSize, Qt, QUrl, QVariantAnimation, Signal
 from PySide6.QtGui import QColor, QFont, QLinearGradient, QPainter, QPainterPath, QPen
 from PySide6.QtWidgets import (
     QButtonGroup, QComboBox, QFrame, QHBoxLayout, QLabel, QListWidget, QListWidgetItem,
@@ -203,6 +203,8 @@ class BallDelegate(TableItemDelegate):
                     play = groups["play"]
                     if play == "size":
                         return [(tr(BINGO_LABELS[play]) + " · " + tr(SIZE_LABELS[groups["main"][0]]), [])]
+                    if play == "triple":
+                        return [(tr(BINGO_LABELS[play]), [(f"{groups['main'][0]:02}", "normal")] * 3)]
                     values = [(tr(SIZE_LABELS.get(n, str(n))), "normal") for n in groups["main"]]
                     return [(tr(BINGO_LABELS.get(play, play)), values)]
                 return [(tr(GROUP_LABELS.get(key, key)), [(n, "gold" if key == "special" else "normal") for n in values]) for key, values in groups.items()]
@@ -622,6 +624,86 @@ class ThemeToggle(QPushButton):
         painter.drawRoundedRect(track, 8.5, 8.5)
         painter.setBrush(QColor("#FFFFFF"))
         painter.drawEllipse(QRectF(track.x() + (15 if self.isChecked() else 2), track.y() + 2, 13, 13))
+
+
+class DayNightToggle(ThemeToggle):
+    """Native adaptation of the Uiverse.io day/night switch by JkHuger."""
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setObjectName("dayNightToggle")
+        self.setText("")
+        self.setFixedSize(44, 34)
+        self.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
+        self._position = 0.0
+        self.animation = QVariantAnimation(self)
+        self.animation.setDuration(300)
+        self.animation.setEasingCurve(QEasingCurve.Type.InOutCubic)
+        self.animation.valueChanged.connect(self._move_thumb)
+        self.toggled.connect(self._animate)
+
+    def sizeHint(self):
+        return QSize(44, 34)
+
+    def minimumSizeHint(self):
+        return QSize(44, 34)
+
+    def _move_thumb(self, position):
+        self._position = float(position)
+        self.update()
+
+    def _animate(self, checked):
+        self.animation.stop()
+        target = 1.0 if checked else 0.0
+        if not self.isVisible():
+            self._move_thumb(target)
+            return
+        self.animation.setStartValue(self._position)
+        self.animation.setEndValue(target)
+        self.animation.start()
+
+    def paintEvent(self, event):
+        QPushButton.paintEvent(self, event)
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        width, height = 30.0, 17.0
+        painter.translate((self.width() - width) / 2, (self.height() - height) / 2)
+        painter.scale(width / 100, height / 50)
+        if not self.isEnabled():
+            painter.setOpacity(0.5)
+        position = self._position
+
+        def blend(day, night):
+            return QColor.fromRgbF(
+                day.redF() + (night.redF() - day.redF()) * position,
+                day.greenF() + (night.greenF() - day.greenF()) * position,
+                day.blueF() + (night.blueF() - day.blueF()) * position,
+            )
+
+        track = blend(QColor.fromHslF(48/360, .9, .85), QColor.fromHslF(198/360, .9, .15))
+        thumb = blend(QColor.fromHslF(48/360, .9, .55), QColor.fromHslF(198/360, .9, .55))
+        painter.setPen(Qt.PenStyle.NoPen)
+        painter.setBrush(track)
+        painter.drawRoundedRect(QRectF(0, 0, 100, 50), 25, 25)
+        painter.setPen(Qt.PenStyle.NoPen)
+        painter.setBrush(thumb)
+        painter.translate(25 + 50 * position, 25)
+        painter.drawEllipse(QRectF(-21, -21, 42, 42))
+        painter.save()
+        painter.setOpacity((1 - position) * (1 if self.isEnabled() else .5))
+        painter.rotate(90 * position)
+        painter.setBrush(QColor("#FFFFFF"))
+        for _ in range(8):
+            painter.drawRoundedRect(QRectF(-1, -17 - 4 * position, 2, 5), 1, 1)
+            painter.rotate(45)
+        painter.restore()
+        icon = QPainterPath()
+        radius = 6 + 5 * position
+        icon.addEllipse(QRectF(-radius, -radius, 2 * radius, 2 * radius))
+        cutout = QPainterPath()
+        cutout.addEllipse(QRectF(15 - 20 * position, -30 + 11 * position, 23, 23))
+        painter.setBrush(QColor("#FFFFFF"))
+        painter.drawPath(icon.subtracted(cutout))
 
 
 class SidebarToggle(QPushButton):

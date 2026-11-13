@@ -1,6 +1,6 @@
-# LottoLens V0.2.0 — Windows installer
+# LottoLens V0.8.0 — Windows installer
 
-Build output: `dist/LottoLens-Setup-0.2.0.exe`, Windows 10/11 x64. End users do not need Python. The installer supports Vietnamese/English, lets users select a writable destination, and offers launch/desktop-shortcut checkboxes on the completion page. A Start Menu app and uninstall entry are installed, plus the standard Windows Installed Apps entry.
+Build output: `dist/LottoLens-Setup-0.8.0.exe`, Windows 10/11 x64. End users do not need Python. The installer supports Vietnamese/English, lets users select a writable destination, and offers launch/desktop-shortcut checkboxes on the completion page. A Start Menu app and uninstall entry are installed, plus the standard Windows Installed Apps entry.
 
 ## Layout and data
 
@@ -9,6 +9,7 @@ Chosen folder/
   LottoLens.exe
   LICENSE                     GNU GPLv3 text
   COPYRIGHT                   Copyright (C) 2026 TKNguyen; GPL-3.0-only
+  third-party/                upstream license texts and corresponding-source links
   _internal/                  bundled Python, Qt, policy, icons, tutorial
   unins000.exe                Windows uninstaller
   unins000.dat
@@ -26,6 +27,12 @@ Chosen folder/
 All application user data stays under the chosen folder's `data` child. Windows shortcuts, uninstall registration and optional Task Scheduler registrations are OS integration records; they are removed by uninstall. Installation/uninstall logs and normal Windows temporary files are OS-managed.
 
 The default location is `%LOCALAPPDATA%/Programs/LottoLens`. Pick another folder you can write to, such as `D:/Apps/LottoLens`. An unwritable destination is rejected. Running the source with `python main.py` still uses its existing paths; setup does not import or move the developer's database, preferences, API key or acceptance receipts. Existing source data can be backed up separately; no automatic migration is performed.
+
+## In-app updates
+
+LottoLens checks the [public GitHub release endpoint](https://api.github.com/repos/TKNguyenn/LottoLens/releases/latest) at startup after policy and onboarding, then every hour while open. The switch in Settings defaults to on and takes effect when saved. The sidebar button checks on demand even with the switch off.
+
+Publish a stable GitHub Release tagged `vX.Y.Z` with the exact asset name `LottoLens-Setup-X.Y.Z.exe` and GitHub's SHA-256 asset digest. LottoLens prompts before downloading and checks the file size and SHA-256 before launching setup. Setup waits for the old app to exit, installs to the same directory and reopens LottoLens. It leaves the existing `data/` folder in place. Source runs and releases without a usable Windows installer offer the GitHub releases page.
 
 ## Uninstall
 
@@ -49,7 +56,7 @@ python packaging/build.py --iscc "C:/path/to/Inno Setup 6/ISCC.exe"
 
 The build reads `app.__version__` for EXE metadata, installer name and version; it writes a SHA-256 sidecar. `LottoLens.spec` allowlists the license/copyright notice, policy, icons and tutorial resources. The Inno script takes the EXE, `_internal` and root LICENSE/COPYRIGHT files, never `data` or the workspace config/database. Build logs are local in `build/`.
 
-LottoLens is GPL-3.0-only, copyright 2026 TKNguyen. When distributing the setup, make the corresponding source and build instructions available under GPLv3 and preserve third-party notices. Adding the project license does not replace the licenses of Python, Qt/PySide6, bundled libraries or installer components.
+LottoLens is GPL-3.0-only, copyright 2026 TKNguyen. When distributing the setup, make the corresponding source and build instructions available under GPLv3 and preserve [third-party notices](THIRD_PARTY.md).
 
 `LottoLens.exe --check-install PATH/report.json` is an explicit offline package diagnostic: open each page, both themes/languages and all tutorial images, verify installed paths and block socket connections. It creates an empty database in this copy's data folder. It does not accept policy, fetch history, call AI or register tasks. Use a disposable installation when running it.
 

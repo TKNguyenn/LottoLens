@@ -16,6 +16,8 @@ LottoLens không cổ súy mê tín dị đoan hay tuyên bố có thể biết 
 
 Lịch sử và xác nhận chính sách được lưu trên máy. Cập nhật lịch sử lấy dữ liệu từ nguồn công bố khi bạn yêu cầu hoặc bật lịch tự động. Khi bạn chủ động sử dụng tính năng AI, nội dung yêu cầu có thể được gửi đến nhà cung cấp đã cấu hình và có thể phát sinh phí. Kết quả AI có thể sai. Tránh nhập thông tin cá nhân hoặc bí mật vào câu hỏi gửi AI.
 
+LottoLens kiểm tra bản phát hành công khai trên GitHub khi bạn bấm kiểm tra hoặc bật chế độ tự động trong Cài đặt. Yêu cầu kiểm tra chỉ lấy thông tin bản phát hành. App tải bộ cài sau khi bạn đồng ý cập nhật.
+
 ---
 
 # LottoLens usage policy
@@ -35,3 +37,5 @@ LottoLens does not promote superstition or claim that fortune-telling, dreams, l
 ## Data and online features
 
 Draw history and policy acceptance are stored on your device. History updates fetch published results when you request them or enable automatic updates. When you choose to use AI, request content may be sent to your configured provider and may incur fees. AI output can be wrong. Avoid including personal or confidential information in your AI queries.
+
+LottoLens checks public GitHub releases when you click Check for updates or enable automatic checks in Settings. The check only retrieves release information. The app downloads the installer after you approve the update.

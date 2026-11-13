@@ -1,6 +1,7 @@
 """Build an offline Windows x64 setup; tools only, no application config read."""
 import argparse
 import hashlib
+from importlib.metadata import distribution
 import os
 from pathlib import Path
 import shutil
@@ -21,6 +22,13 @@ def main():
         raise SystemExit('Install Inno Setup and supply --iscc PATH/ISCC.exe.')
     version = tuple(int(part) for part in __version__.split('.')) + (0,)
     (ROOT/'build').mkdir(exist_ok=True)
+    notices = ROOT/'build/third-party'
+    notices.mkdir(exist_ok=True)
+    pyinstaller = distribution('pyinstaller')
+    license_path = next(file for file in pyinstaller.files if file.name == 'COPYING.txt')
+    shutil.copyfile(pyinstaller.locate_file(license_path), notices/'PyInstaller.txt')
+    shutil.copyfile(Path(sys.base_prefix)/'LICENSE.txt', notices/'Python.txt')
+    shutil.copyfile(Path(compiler).resolve().with_name('license.txt'), notices/'Inno-Setup.txt')
     (ROOT/'build/version-info.txt').write_text(
         f"VSVersionInfo(ffi=FixedFileInfo(filevers={version!r}, prodvers={version!r}, mask=0x3f, flags=0, OS=0x40004, fileType=1, subtype=0, date=(0,0)), "
         f"kids=[StringFileInfo([StringTable('040904B0',[StringStruct('CompanyName','LottoLens'),StringStruct('FileDescription','LottoLens desktop'),StringStruct('FileVersion','{__version__}'),StringStruct('ProductName','LottoLens'),StringStruct('ProductVersion','{__version__}'),StringStruct('OriginalFilename','LottoLens.exe')])]), VarFileInfo([VarStruct('Translation',[1033,1200])])])",

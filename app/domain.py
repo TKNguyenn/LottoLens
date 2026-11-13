@@ -3,6 +3,8 @@ from datetime import datetime, timezone
 import hashlib
 import json
 
+MAX_GROUP_SIZES = (("special", 2), ("first", 4), ("second", 6), ("third", 8))
+
 
 def canonical(value):
     return json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":"), allow_nan=False)
@@ -115,10 +117,11 @@ def validate_draw(rule, draw):
         raise ValueError("Kết quả phải là object.")
     if rule.kind == "triples":
         groups = draw.payload.get("groups", {})
-        if set(groups) != {"special", "first", "second", "third"}:
+        if not isinstance(groups, dict) or set(groups) != dict(MAX_GROUP_SIZES).keys():
             raise ValueError("Thiếu nhóm giải Max 3D.")
-        for key, size in (("special", 2), ("first", 4), ("second", 6), ("third", 8)):
-            if len(groups[key]) != size or any(not isinstance(x, str) or len(x) != 3 or not x.isascii() or not x.isdigit() for x in groups[key]):
+        for key, size in MAX_GROUP_SIZES:
+            values = groups[key]
+            if not isinstance(values, (list, tuple)) or len(values) != size or any(not isinstance(x, str) or len(x) != 3 or not x.isascii() or not x.isdigit() for x in values):
                 raise ValueError("Nhóm giải phải giữ chuỗi ba chữ số, kể cả số 0 đầu.")
     else:
         _numbers(draw.payload.get("main"), rule.drawn, rule.population, unique=rule.kind != "dice")

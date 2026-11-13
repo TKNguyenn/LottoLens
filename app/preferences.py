@@ -8,12 +8,13 @@ from .rules import RULES
 
 def default_preferences():
     return {"language": "vi", "history_limits": {game: 100 for game in RULES}, "analysis_window": 90,
-            "auto_updates": {game: {"enabled": False, "time": "20:00"} for game in RULES}}
+            "auto_updates": {game: {"enabled": False, "time": "20:00"} for game in RULES},
+            "auto_app_updates": True}
 
 
 def validate_preferences(body):
     if (not isinstance(body, dict) or not {"language", "history_limits"} <= set(body)
-            or set(body) - {"language", "history_limits", "analysis_window", "auto_updates"}):
+            or set(body) - {"language", "history_limits", "analysis_window", "auto_updates", "auto_app_updates"}):
         raise ValueError("Cài đặt giao diện không hợp lệ.")
     limits = body["history_limits"]
     if body["language"] not in ("vi", "en") or not isinstance(limits, dict) or set(limits) != set(RULES):
@@ -31,8 +32,11 @@ def validate_preferences(body):
                 or type(value["enabled"]) is not bool or not isinstance(value["time"], str)
                 or re.fullmatch(r"(?:[01][0-9]|2[0-3]):[0-5][0-9]", value["time"]) is None):
             raise ValueError("Lịch tự cập nhật cần công tắc bật/tắt và giờ HH:MM hợp lệ.")
+    app_updates = body.get("auto_app_updates", True)
+    if type(app_updates) is not bool:
+        raise ValueError("Cài đặt giao diện không hợp lệ.")
     return {"language": body["language"], "history_limits": dict(limits), "analysis_window": window,
-            "auto_updates": {game: dict(value) for game, value in automatic.items()}}
+            "auto_updates": {game: dict(value) for game, value in automatic.items()}, "auto_app_updates": app_updates}
 
 
 def load_preferences(path):

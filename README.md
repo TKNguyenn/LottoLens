@@ -3,11 +3,12 @@
 <p align="center">Lịch sử Vietlott, xác suất và thống kê — trong một ứng dụng desktop.</p>
 <p align="center"><strong>Tiếng Việt</strong> · <a href="README.en.md">English</a></p>
 <p align="center">
-  <img src="https://img.shields.io/badge/version-0.2.0-C81E33" alt="Phiên bản 0.2.0">
+  <img src="https://img.shields.io/badge/version-0.8.0-C81E33" alt="Phiên bản 0.8.0">
   <img src="https://img.shields.io/badge/platform-Windows_10%2F11-0078D4" alt="Windows 10 và 11">
   <img src="https://img.shields.io/badge/Python-3.11-3776AB" alt="Python 3.11">
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-GPLv3-blue" alt="Giấy phép GPLv3"></a>
 </p>
+<p align="center"><strong><a href="https://github.com/TKNguyenn/LottoLens/releases/download/v0.8.0/LottoLens-Setup-0.8.0.exe">Tải bộ cài Windows V0.8.0</a></strong> · <a href="https://github.com/TKNguyenn/LottoLens/releases/tag/v0.8.0">Ghi chú phát hành</a></p>
 
 ![Tổng quan LottoLens với giao diện tối](docs/images/vi-overview-dark.png)
 
@@ -22,10 +23,11 @@
 - **Lịch sử có nguồn:** tải kết quả từ Vietlott, tìm theo kỳ/số và mở nguồn để đối chiếu. Đồng bộ tăng dần khi có mốc lịch sử đã xác minh.
 - **Thống kê và xác suất:** tần suất, heatmap và xác suất theo mô hình luật; chọn số kỳ gần nhất dùng để phân tích.
 - **Bộ số tham khảo:** đồng đều, tần suất, Bayes hoặc AI. Lưu bộ số cùng phương pháp và snapshot lịch sử đã dùng.
-- **Kiểm chứng tại máy:** so phương pháp với lựa chọn ngẫu nhiên, chỉ dùng dữ liệu trước kỳ đang kiểm chứng.
+- **Mô phỏng và kiểm chứng:** mô phỏng vé và so phương pháp với lựa chọn ngẫu nhiên trên cả bảy trò. Báo cáo hiển thị số vé trúng, tỷ lệ và từng hạng giải.
 - **Tự cập nhật từng trò:** chọn giờ theo Việt Nam, chạy qua Windows Task Scheduler ngay cả khi đóng app.
 - **Giao diện Việt/Anh:** đổi ngôn ngữ trực tiếp, theme sáng/tối có gradient, sidebar thu gọn, hướng dẫn bằng ảnh và luật từng trò.
 - **AI tùy chọn:** endpoint HTTPS OpenAI-compatible, tải danh sách model, nhập model thủ công và streaming.
+- **Cập nhật ứng dụng:** kiểm tra GitHub từ sidebar, có công tắc tự kiểm tra và xác nhận trước khi tải bộ cài.
 
 <details>
 <summary>Xem giao diện sáng</summary>
@@ -35,6 +37,14 @@
 </details>
 
 ## Bắt đầu
+
+### Bộ cài Windows
+
+Tải [LottoLens-Setup-0.8.0.exe](https://github.com/TKNguyenn/LottoLens/releases/download/v0.8.0/LottoLens-Setup-0.8.0.exe) cho **Windows 10/11 x64**. Nếu đã cài LottoLens, hãy đóng app và chọn lại thư mục cài hiện tại để tiếp tục dùng dữ liệu trong thư mục `data`.
+
+Bộ cài cho chọn thư mục lưu app và dữ liệu. Trang cuối có ô tạo shortcut Desktop và mở app. Khi gỡ, chọn **giữ dữ liệu** hoặc **xóa toàn bộ dữ liệu**. Cả hai dọn lịch tự cập nhật của bản cài đó. Setup chưa ký số, Windows có thể báo nhà phát hành không xác định.
+
+Từ V0.8.0, dùng **Kiểm tra cập nhật** ở cuối sidebar. App mặc định tự kiểm tra sau khi mở và mỗi giờ khi đang chạy. Để tắt, vào **Cài đặt → Cập nhật LottoLens** rồi bấm **Lưu cài đặt**. App hỏi trước khi tải bản mới và kiểm tra SHA-256 của bộ cài.
 
 ### Chạy từ source
 
@@ -49,12 +59,6 @@ py -3.11 -m venv .venv
 ```
 
 Lần mở đầu, cửa sổ chính hiện cùng popup chính sách. Tích riêng **Đã đọc** và **Chấp nhận** để tiếp tục tới hướng dẫn bằng ảnh. Mở lại hướng dẫn bằng **Trợ giúp** trên thanh trên; chính sách nằm trong **Cài đặt → Giới thiệu**.
-
-### Bộ cài Windows
-
-Xem [Releases](https://github.com/TKNguyenn/LottoLens/releases) để kiểm tra các bản phát hành. Nếu chưa có setup đính kèm, hãy chạy từ source hoặc [tự build bộ cài](packaging/README.md).
-
-Bộ cài cho chọn thư mục lưu app và dữ liệu; máy đích không cần Python. Trang cuối có ô tạo shortcut Desktop và mở app. Khi gỡ, chọn **giữ dữ liệu** hoặc **xóa toàn bộ dữ liệu**; cả hai dọn lịch tự cập nhật của bản cài đó. Setup hiện chưa ký số, Windows có thể báo nhà phát hành không xác định.
 
 ## Hướng dẫn sử dụng
 
@@ -78,7 +82,15 @@ Mở **Thống kê** để xem tần suất và heatmap. Mở **Xác suất** đ
 
 Trong **Bộ số tham khảo**, chọn phương pháp và số bộ rồi tạo. Đồng đều dùng được khi chưa có lịch sử; tần suất, Bayes và AI cần đủ cửa sổ phân tích. Chỉ nhập **Kỳ dự định chơi** khi muốn lưu để đối chiếu sau này.
 
-Trong **Kiểm chứng**, chọn phương pháp tại máy để so với lựa chọn ngẫu nhiên. Nếu đặt phân tích 100 kỳ nhưng chỉ lưu 100, kiểm chứng dùng tối đa 99 làm đầu vào, chừa kỳ để đối chiếu và hiện ghi chú. Cần ít nhất hai kỳ. AI không chạy backtest hàng loạt.
+Trong **Kiểm chứng**, chọn phương pháp để so với lựa chọn ngẫu nhiên. Nếu đặt phân tích 100 kỳ nhưng chỉ lưu 100, kiểm chứng dùng tối đa 99 làm đầu vào, chừa kỳ để đối chiếu và hiện ghi chú. Cần ít nhất hai kỳ. **Chạy kiểm chứng AI** gửi lịch sử trước kỳ mới nhất tới model đã cấu hình và có thể tính phí. App tự chấm vé trên một kỳ đã lưu rồi so với 200 lượt chọn ngẫu nhiên tại máy. Model có thể đã biết kết quả công khai, nên đây là phép thử tham khảo.
+
+Bấm **Chạy mô phỏng** để thử một vé qua 10.000 kỳ giả lập. Với Max 3D, Max 3D Pro và Bingo18, chọn vé ngay trên trang Kiểm chứng. Kiểm chứng Bingo18 dùng cùng cách chơi và tối đa 5 vé khác nhau mỗi kỳ. **Lớn–Hòa–Nhỏ** có 3 lựa chọn, **Ba số bất kỳ** có 1 lựa chọn.
+
+Để tạo các dòng như kết quả Bingo18, vào **Bộ số tham khảo → Kết quả giả lập (3 số)**, chỉnh **Số bộ** rồi bấm **Tạo kết quả giả lập**. Mỗi dòng có ba số từ 01 đến 06 và có thể lặp số. Các dòng chỉ hiện trên bảng. Để xem xác suất của một cửa và lựa chọn cụ thể, dùng trang **Xác suất**.
+
+Kiểu bộ ba hỗ trợ đồng đều, tần suất, Bayes và AI. Tần suất và Bayes đếm riêng từng vị trí trên số kỳ phân tích đã đặt. Bayes dùng prior tương đương 90 kỳ đồng đều. AI dùng model đã cấu hình, có thể tính phí và chỉ được gọi khi bấm tạo.
+
+Báo cáo kiểm chứng cho biết số vé trúng và so tỷ lệ với chọn ngẫu nhiên. Báo cáo mô phỏng cho biết vé đã thử, số kỳ trúng và tần suất từng hạng giải trong lần chạy. Chọn **Xem dữ liệu JSON** để xem dữ liệu kỹ thuật.
 
 ### 4. Cài đặt số kỳ và lịch tự cập nhật
 
@@ -115,12 +127,12 @@ Cả 7 trò đều có lịch sử, thống kê, xác suất lý thuyết và b�
 | Mega 6/45 | Vé cơ bản | Có | Có |
 | Power 6/55 | Vé cơ bản, tính riêng số bonus | Có | Có |
 | Lotto 5/35 | Vé cơ bản, tính riêng số đặc biệt | Có | Có |
-| Keno chọn 1–10 | Vé chọn 1–10 số, xác suất theo số lượng trùng | Theo số lượng trùng | Chưa hỗ trợ |
-| Max 3D | Vé một bộ `000–999`, xác suất theo sự kiện trúng | Chưa hỗ trợ | Chưa hỗ trợ |
-| Max 3D Pro | Vé hai bộ có thứ tự, cho phép hai bộ giống nhau | Chưa hỗ trợ | Chưa hỗ trợ |
-| Bingo18 | Đủ 38 lựa chọn trong các nhóm được mô hình hóa | Chưa hỗ trợ | Chưa hỗ trợ |
+| Keno chọn 1–10 | Vé chọn 1–10 số, xác suất theo số lượng trùng | Theo số lượng trùng và hạng giải | Có, gồm hạng trùng 0 số của bậc 8–10 |
+| Max 3D | Vé một bộ `000–999`, xác suất theo sự kiện trúng | Có | Có |
+| Max 3D Pro | Vé hai bộ có thứ tự, cho phép hai bộ giống nhau | Có | Có, tính các hạng có thể cùng trúng |
+| Bingo18 | Đủ 38 lựa chọn trong các nhóm được mô hình hóa | Có | Có, theo cách chơi đã chọn |
 
-**Mô phỏng** tạo các kỳ quay giả lập. **Kiểm chứng** đánh giá phương pháp chọn số trên các kỳ đã lưu. Keno mô phỏng theo số lượng trùng và chưa tính đủ xác suất nhận thưởng. Chơi bao và Max 3D+ chưa có mô hình riêng. Xem [ma trận hỗ trợ](docs/game_support_matrix.md) và [nguồn kiểm chứng luật](docs/source_audit.md).
+Mô phỏng và kiểm chứng Keno, Max 3D, Max 3D Pro và Bingo18 báo số lần trúng theo luật hiện được mô hình hóa. Một vé Max có thể xuất hiện ở nhiều hạng trong cùng kỳ và chỉ được đếm một lần trong tỷ lệ vé trúng. Tiền thưởng lịch sử và EV của bốn trò vẫn chưa được xác minh. Chơi bao, Keno bổ sung và Max 3D+ cần mô hình riêng. Xem [ma trận hỗ trợ](docs/game_support_matrix.md) và [nguồn kiểm chứng luật](docs/source_audit.md).
 
 ## Dữ liệu được lưu ở đâu?
 
@@ -151,7 +163,7 @@ python main.py odds --game keno --mode pick8
 python main.py import-csv --game mega "history.csv"
 ```
 
-CLI có phạm vi riêng, chưa có đầy đủ lựa chọn vé Bingo18 và không thay mọi điều khiển GUI. Xem `python main.py --help`.
+Dùng giao diện desktop để mô phỏng vé Max 3D, Max 3D Pro và Bingo18 hoặc kiểm chứng các cách chơi Bingo18. Xem `python main.py --help` để biết các lệnh CLI.
 
 ## Phát triển và kiểm tra
 

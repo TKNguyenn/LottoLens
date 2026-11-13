@@ -15,11 +15,10 @@ from app import __version__, ui
 def main():
     application = QApplication.instance() or QApplication([])
     failures = []
-    expected = "LottoLens — V0.2.0"
+    expected = f"LottoLens — V{__version__}"
     def inspect():
         window = next(w for w in application.topLevelWidgets() if isinstance(w, ui.Desktop) and w.isVisible())
         try:
-            assert __version__ == "0.2.0"
             assert application.applicationVersion() == __version__
             for language in ("en", "vi", "en"):
                 window.apply_language(language)

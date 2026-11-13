@@ -8,6 +8,7 @@ from tempfile import TemporaryDirectory
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from PySide6.QtCore import Qt
+from PySide6.QtTest import QTest
 from PySide6.QtWidgets import QApplication
 from app.domain import Draw
 from app.rules import get_rule
@@ -46,6 +47,7 @@ def main():
                 window.apply_language(language)
                 for name, page, theme in shots:
                     window.set_theme(theme)
+                    QTest.qWait(window.theme_button.animation.duration() + 50)
                     window.nav.setCurrentRow(page)
                     window.pages.currentWidget().verticalScrollBar().setValue(0)
                     window.notice.setText('Ảnh minh họa — dữ liệu mẫu, không phải kết quả chính thức.' if language=='vi'

@@ -2,16 +2,19 @@
 from html import escape
 from datetime import datetime, timedelta, timezone
 import json
+import os
 from pathlib import Path
 from random import SystemRandom
 import sqlite3
+import subprocess
 import sys
+from tempfile import mkstemp
 
-from PySide6.QtCore import QEasingCurve, QIODevice, QRegularExpression, QSaveFile, QSignalBlocker, Qt, QTime, QTimer, QUrl, QVariantAnimation
+from PySide6.QtCore import QEasingCurve, QIODevice, QLocale, QRegularExpression, QSaveFile, QSignalBlocker, Qt, QTime, QTimer, QUrl, QVariantAnimation
 from PySide6.QtGui import QDesktopServices, QFont, QIcon, QRegularExpressionValidator, QTextCursor
 from PySide6.QtWidgets import (
-    QApplication, QComboBox, QFileDialog, QFrame, QHBoxLayout, QListWidget,
-    QGridLayout, QHeaderView, QLineEdit, QMainWindow, QProgressBar, QPushButton,
+    QApplication, QBoxLayout, QComboBox, QFileDialog, QFrame, QHBoxLayout, QListWidget,
+    QGridLayout, QHeaderView, QLineEdit, QMainWindow, QMessageBox, QProgressBar, QPushButton,
     QScrollArea, QStackedWidget, QTableWidget, QTableWidgetItem, QTimeEdit,
     QSizePolicy, QVBoxLayout, QWidget,
 )
@@ -19,11 +22,13 @@ from PySide6.QtWidgets import (
 from . import ai, __version__
 from .ai_generation import AI_METHOD, AI_LABEL, build_generation_request, generate_with_ai
 from .backtest import run_backtest
+from .bingo_generation import build_result_request, generate_ai_results, generate_results
 from .domain import Ticket
 from .generation import METHOD_LABELS, generate, explain_ticket
 from .game_guide import show_game_guide
 from .model_catalog import fetch_models
 from .onboarding import show_onboarding
+from .paths import installed_data
 from .gameplay import BINGO_LABELS, SIZE_LABELS, bingo_choices, sample_selections, ticket_capacity
 from .policy import show_policy
 from .probability import probabilities
@@ -38,11 +43,12 @@ from .theme import ASSETS, LIGHT, apply_theme, themed_icon
 from .preferences import default_preferences, load_preferences, save_preferences
 from .scheduling import configure_schedules
 from .i18n import bind_text, set_language, tr
-from .components import (Badge, BallDelegate, BallLabel, BallStrip, Callout, EmptyState, Histogram,
+from .components import (Badge, BallDelegate, BallLabel, BallStrip, Callout, DayNightToggle, EmptyState, Histogram,
                          IconLabel, LocalizedTextBrowser, MiniBar, NoticeLabel, NumberHeatmap, SectionCard, SegmentedControl,
                          SidebarNav, SidebarToggle, SourceDelegate, StatCard, StepperSpinBox,
                          TextLabel, ThemedComboBox, ThemeToggle)
 from .workers import Worker
+from .updates import RELEASE_PAGE, check_release, download_setup
 
 APP_NAME = "LottoLens"
 APP_TITLE = f"{APP_NAME} — V{__version__}"
@@ -94,6 +100,7 @@ class Desktop(QMainWindow):
         self.actions = []
         self.ticket_controls = []
         self._play_context = "single"
+        self._suggestion_play = "draw"
         self._bingo_sample = bingo_choices()[0]
         self._max_sample = ["007", "123"]
         self.tokens = LIGHT
@@ -138,10 +145,19 @@ class Desktop(QMainWindow):
         ]
         for note in self.sidebar_notes:
             foot.addWidget(note)
-        self.theme_button = ThemeToggle()
-        self.theme_button.setObjectName("themeToggle"); bind_text(self.theme_button, 'setAccessibleName', 'Đổi giao diện sáng tối')
+        self.check_updates_button = self.icon_button("Kiểm tra cập nhật", "reload", lambda: self.check_app_updates(manual=True))
+        self.check_updates_button.setObjectName("quiet")
+        self.check_updates_button.setFixedHeight(34)
+        bind_text(self.check_updates_button, "setToolTip", "Kiểm tra cập nhật")
+        bind_text(self.check_updates_button, "setAccessibleName", "Kiểm tra cập nhật")
+        self.theme_button = DayNightToggle()
+        bind_text(self.theme_button, 'setAccessibleName', 'Đổi giao diện sáng tối')
+        bind_text(self.theme_button, 'setToolTip', 'Đổi giao diện sáng / tối')
         self.theme_button.clicked.connect(lambda: self.set_theme("light" if self.theme_name == "dark" else "dark", persist=True))
-        foot.addWidget(self.theme_button); left.addWidget(footer)
+        self.footer_controls = QHBoxLayout(); self.footer_controls.setSpacing(4)
+        self.footer_controls.addWidget(self.check_updates_button, 1)
+        self.footer_controls.addWidget(self.theme_button, 0, Qt.AlignmentFlag.AlignHCenter)
+        foot.addLayout(self.footer_controls); left.addWidget(footer)
         root.addWidget(sidebar)
         workspace = QWidget(); workspace.setObjectName("workspace")
         right = QVBoxLayout(workspace); right.setContentsMargins(0, 0, 0, 0); right.setSpacing(0)
@@ -209,6 +225,13 @@ class Desktop(QMainWindow):
         self._auto_results = {}
         self.history_poll = QTimer(self); self.history_poll.setInterval(30_000)
         self.history_poll.timeout.connect(self.poll_background_updates); self.history_poll.start()
+        self.app_update_timer = QTimer(self); self.app_update_timer.setInterval(3_600_000)
+        self.app_update_timer.setTimerType(Qt.TimerType.PreciseTimer)
+        self.app_update_timer.timeout.connect(self.check_app_updates)
+        self.app_updates_ready = False
+        self.update_check_worker = None
+        self.pending_app_update = None
+        self.prompted_release = None
         if preferences_error:
             self.notice.setText(f"Chưa đọc được cài đặt giao diện: {preferences_error}")
         try:
@@ -227,8 +250,8 @@ class Desktop(QMainWindow):
         for note in self.sidebar_notes:
             note.setVisible(not self.sidebar_collapsed)
         self.sidebar_footer.layout().setContentsMargins(0 if collapsed else 10, 12, 0 if collapsed else 10, 0)
-        self.theme_button.setText("" if collapsed else "Sáng / Tối")
-        bind_text(self.theme_button, 'setToolTip', 'Đổi giao diện sáng / tối' if collapsed else '')
+        self.footer_controls.setDirection(QBoxLayout.Direction.TopToBottom if collapsed else QBoxLayout.Direction.LeftToRight)
+        bind_text(self.check_updates_button, 'setText', "" if collapsed else "Kiểm tra cập nhật")
         self.sidebar_toggle.setChecked(self.sidebar_collapsed)
         text = "Mở rộng thanh điều hướng" if collapsed else "Thu gọn thanh điều hướng"
         bind_text(self.sidebar_toggle, 'setToolTip', text); bind_text(self.sidebar_toggle, 'setAccessibleName', text)
@@ -519,7 +542,7 @@ class Desktop(QMainWindow):
         split, grid = self.grid(1, 0); grid.setColumnMinimumWidth(1, 352)
         frame = SectionCard("Thiết lập sinh số", "suggest")
         body = frame.body
-        self.build_ticket_controls(body)
+        self.build_ticket_controls(body, for_suggestions=True)
         self.method = ThemedComboBox()
         for method, text in METHOD_LABELS.items():
             self.method.addItem(text, method)
@@ -529,25 +552,32 @@ class Desktop(QMainWindow):
         self.count = StepperSpinBox(); self.count.setRange(1, 100); self.count.setValue(5)
         self.target = QLineEdit(); bind_text(self.target, 'setPlaceholderText', 'Ví dụ: 01587; để trống nếu chỉ tạo để xem')
         bind_text(self.target, 'setToolTip', 'Mã kỳ quay bạn dự định dùng bộ số, để lưu và đối chiếu sau khi có kết quả.')
-        self.method_requirements = self.add_field(body, "Phương pháp", self.method, "Bayes và tần suất cần ít nhất 90 kỳ. Đồng đều dùng được khi chưa có lịch sử.")
-        row, fields = self.grid(1, 2)
-        count_box = QVBoxLayout(); target_box = QVBoxLayout()
+        self.method_box = QWidget()
+        method_layout = QVBoxLayout(self.method_box); method_layout.setContentsMargins(0, 0, 0, 0); method_layout.setSpacing(8)
+        self.method_requirements = self.add_field(method_layout, "Phương pháp", self.method, "Bayes và tần suất cần ít nhất 90 kỳ. Đồng đều dùng được khi chưa có lịch sử.")
+        body.addWidget(self.method_box)
+        row, self.suggestion_fields = self.grid(1, 2)
+        count_box = QVBoxLayout()
+        self.target_box = QWidget()
+        target_box = QVBoxLayout(self.target_box); target_box.setContentsMargins(0, 0, 0, 0); target_box.setSpacing(12)
         self.count_hint = self.add_field(count_box, "Số bộ", self.count, "Tối đa 100")
         self.add_field(target_box, "Kỳ dự định chơi", self.target, "Chỉ cần khi bấm Lưu, dùng để đối chiếu sau.")
-        fields.addLayout(count_box, 0, 0); fields.addLayout(target_box, 0, 1); body.addWidget(row)
+        self.suggestion_fields.addLayout(count_box, 0, 0)
+        self.suggestion_fields.addWidget(self.target_box, 0, 1); body.addWidget(row)
         self.method_note = label("", "subtle"); body.addWidget(self.method_note)
         self.method.currentIndexChanged.connect(self.update_method_note)
         self.update_method_note()
         body.addWidget(self.separator())
         actions = QHBoxLayout(); actions.setSpacing(8)
-        actions.addWidget(self.icon_button("Tạo bộ số tham khảo", "spark", self.make_suggestions, True))
+        self.suggest_button = self.icon_button("Tạo bộ số tham khảo", "spark", self.make_suggestions, True)
+        actions.addWidget(self.suggest_button)
         self.save_button = self.icon_button("Lưu bộ số", "save", self.save_generated); actions.addWidget(self.save_button); actions.addStretch(); body.addLayout(actions)
         clear = self.button("Xóa kết quả", self.clear_generated); clear.setObjectName("quiet"); body.addWidget(clear, 0, Qt.AlignmentFlag.AlignLeft)
         body.addStretch()
         self.ai_history_callout = Callout("Chọn AI phân tích sẽ gửi 90 kỳ tới nhà cung cấp và có thể tính phí. Không tự retry khi lỗi.")
         body.addWidget(self.ai_history_callout)
         grid.addWidget(frame, 0, 0)
-        results = SectionCard("Bộ số vừa tạo", "layers")
+        self.suggestion_card = results = SectionCard("Bộ số vừa tạo", "layers")
         self.generation_badge = Badge("Chưa tạo"); results.header.addWidget(self.generation_badge)
         self.suggestion_table = table(["BỘ", "SỐ ĐƯỢC CHỌN"], [], ball_column=1)
         self.suggestion_table.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeMode.Fixed)
@@ -557,7 +587,7 @@ class Desktop(QMainWindow):
         results.body.addWidget(self.suggestion_placeholder)
         self.saved_label = label("", "caption"); results.body.addWidget(self.saved_label)
         grid.addWidget(results, 0, 1); layout.addWidget(split)
-        lower, lower_grid = self.grid(1, 0); lower_grid.setColumnMinimumWidth(1, 352)
+        self.suggestion_details, lower_grid = self.grid(1, 0); lower_grid.setColumnMinimumWidth(1, 352)
         detail = SectionCard("Giải thích bộ đầu tiên", "info")
         self.explanation = LocalizedTextBrowser(); self.explanation.setMinimumHeight(220); detail.body.addWidget(self.explanation)
         self.explanation.textChanged.connect(self.refresh_generation_view)
@@ -568,7 +598,7 @@ class Desktop(QMainWindow):
         self.suggestion_odds_hint = label("Theo vé đang xem ở phía trên; không phải toàn bộ batch.", "caption")
         limits.body.addWidget(self.suggestion_odds_hint)
         limits.body.addWidget(Callout("Chưa có bằng chứng phương pháp chọn số làm tăng xác suất trúng.", "info")); limits.body.addStretch()
-        lower_grid.addWidget(limits, 0, 1); layout.addWidget(lower); layout.addStretch()
+        lower_grid.addWidget(limits, 0, 1); layout.addWidget(self.suggestion_details); layout.addStretch()
 
     def add_field(self, layout, text, widget, description=""):
         caption = label(text, "subtle"); caption.setBuddy(widget); layout.addWidget(caption)
@@ -579,19 +609,27 @@ class Desktop(QMainWindow):
 
     def clear_generated(self):
         self.generated = None; fill(self.suggestion_table, [])
-        self.explanation.set_ui_text("Chọn phương pháp rồi bấm Tạo bộ số tham khảo.")
+        self.explanation.set_ui_text(
+            "Bấm Tạo kết quả giả lập để xem các bộ ba." if self.suggestion_play_context() == "draw"
+            else "Chọn phương pháp rồi bấm Tạo bộ số tham khảo."
+        )
 
     def refresh_generation_view(self):
-        ready = bool(self.generated and self.suggestion_table.rowCount())
-        self.generation_badge.setText(f"{self.suggestion_table.rowCount()} bộ · hợp lệ" if ready else "Chưa tạo")
+        draw_preview = self.suggestion_play_context() == "draw"
+        count = self.suggestion_table.rowCount()
+        ready = bool(count and (draw_preview or self.generated))
+        if ready and draw_preview:
+            self.generation_badge.setText(f"{count} kết quả giả lập")
+        else:
+            self.generation_badge.setText(f"{count} bộ · hợp lệ" if ready else "Chưa tạo")
         self.generation_badge.set_variant("green" if ready else "neutral")
         self.suggestion_table.setVisible(ready); self.suggestion_placeholder.setVisible(not ready)
-        self.save_button.setEnabled(ready and self.worker is None)
+        self.save_button.setEnabled(ready and self.generated is not None and self.worker is None)
 
     def verification(self, layout):
-        self.heading(layout, "Kiểm chứng phương pháp", "Mỗi kỳ chỉ dùng lịch sử trước đó, so với 200 lượt chọn ngẫu nhiên.")
+        self.heading(layout, "Kiểm chứng và mô phỏng", "So cách chọn số trên lịch sử hoặc thử một vé qua nhiều kỳ giả lập.")
         split, grid = self.grid(1, 0); grid.setColumnMinimumWidth(1, 352)
-        self.verify_setup = setup = SectionCard("Thiết lập kiểm chứng", "verify", "seed 42 · 5 vé/kỳ")
+        self.verify_setup = setup = SectionCard("Thiết lập kiểm chứng", "verify", "5 vé/kỳ")
         self.verify_adjustment = Badge("", "amber"); self.verify_adjustment.hide()
         setup.header.insertWidget(2, self.verify_adjustment)
         self.verify_method = ThemedComboBox()
@@ -601,43 +639,161 @@ class Desktop(QMainWindow):
         self.verify_method.setMinimumContentsLength(10)
         self.verify_method.currentIndexChanged.connect(self.method.setCurrentIndex)
         self.method.currentIndexChanged.connect(self.verify_method.setCurrentIndex)
-        self.verify_requirements = self.add_field(setup.body, "Phương pháp đưa vào kiểm chứng", self.verify_method, "Cần ít nhất 91 kỳ. Chạy một phương pháp đang chọn; AI chưa hỗ trợ kiểm chứng hàng loạt.")
+        self.verify_method.currentIndexChanged.connect(self.update_verify_mode)
+        self.verify_requirements = self.add_field(setup.body, "Phương pháp đưa vào kiểm chứng", self.verify_method, "Cần ít nhất 91 kỳ.")
+        self.verify_play_note = label("", "caption")
+        setup.body.addWidget(self.verify_play_note)
+        self.verify_run_note = label("", "subtle")
+        setup.body.addWidget(self.verify_run_note)
+        self.verify_run_button = self.icon_button("Chạy kiểm chứng", "play", self.start_verification, True)
+        setup.body.addWidget(self.verify_run_button, alignment=Qt.AlignmentFlag.AlignLeft)
         setup.body.addWidget(self.separator())
-        setup.body.addWidget(label("Mô phỏng bổ sung · 10.000 kỳ", "sectionTitle"))
-        setup.body.addWidget(label("Dùng bộ đầu tiên vừa tạo, hoặc vé 1..s nếu chưa tạo. Dữ liệu mô phỏng không lưu vào lịch sử.", "subtle"))
-        actions = QHBoxLayout(); actions.setSpacing(8)
-        actions.addWidget(self.icon_button("Chạy kiểm chứng", "play", self.backtest, True))
-        actions.addWidget(self.icon_button("Chạy mô phỏng", "layers", self.run_simulation))
-        actions.addStretch()
-        setup.body.addLayout(actions); grid.addWidget(setup, 0, 0)
-        latest = SectionCard("Báo cáo hiện tại", "clock")
+        setup.body.addWidget(label("Mô phỏng một vé", "sectionTitle"))
+        setup.body.addWidget(label("Thử cùng một vé qua 10.000 kỳ giả lập để xem tần suất trúng từng hạng.", "subtle"))
+        self.build_ticket_controls(setup.body, "Vé dùng để mô phỏng")
+        self.simulation_ticket_note = label("", "subtle")
+        setup.body.addWidget(self.simulation_ticket_note)
+        setup.body.addWidget(self.icon_button("Chạy mô phỏng", "layers", self.run_simulation), alignment=Qt.AlignmentFlag.AlignLeft)
+        grid.addWidget(setup, 0, 0)
+        self.report_card = latest = SectionCard("Báo cáo hiện tại", "clock")
         self.report_badge = Badge("Chưa chạy"); latest.body.addWidget(self.report_badge)
+        self.report_metric = label("", "statValue"); self.report_metric.hide()
+        latest.body.addWidget(self.report_metric)
         self.report_detail = label("Bấm Chạy kiểm chứng hoặc Chạy mô phỏng để bắt đầu.", "subtle")
         latest.body.addWidget(self.report_detail); latest.body.addStretch(); grid.addWidget(latest, 0, 1)
         layout.addWidget(split)
-        detail = SectionCard("Chi tiết báo cáo", "file", "JSON · kết quả thực tế")
+        self.report_panel = detail = SectionCard("Chi tiết báo cáo", "file")
+        self.report_table = table([], [])
+        detail.body.addWidget(self.report_table)
+        self.report_reading_note = label("", "subtle")
+        detail.body.addWidget(self.report_reading_note)
+        self.report_json_button = self.button("Xem dữ liệu JSON", self.toggle_report_json)
+        detail.body.addWidget(self.report_json_button, alignment=Qt.AlignmentFlag.AlignLeft)
         self.report = LocalizedTextBrowser(); self.report.setObjectName("report"); self.report.setMinimumHeight(230)
-        self.report.textChanged.connect(self.refresh_report_view)
-        detail.body.addWidget(self.report)
-        detail.body.addWidget(Callout("Báo cáo chưa hoàn tất chỉ chứa phần đã chạy; trạng thái được lấy từ kết quả thực tế.", "info"))
+        self.report.hide(); detail.body.addWidget(self.report)
+        detail.hide()
         layout.addWidget(detail); layout.addStretch()
+        self.report.textChanged.connect(self.refresh_report_view)
+
+    def toggle_report_json(self):
+        show = self.report.isHidden()
+        self.report.setVisible(show)
+        bind_text(self.report_json_button, "setText", "Ẩn dữ liệu JSON" if show else "Xem dữ liệu JSON")
 
     def refresh_report_view(self):
         try:
             body = json.loads(self.report.toPlainText())
         except (ValueError, TypeError):
             body = {}
+        if not isinstance(body, dict):
+            body = {}
         status = body.get("status")
-        self.report_badge.setText("Hoàn tất" if status == "completed" else "Chưa hoàn tất" if status == "incomplete" else str(status) if status else "Chưa chạy")
+        self.report_badge.setText("Hoàn tất" if status == "completed" else "Chưa hoàn tất" if status == "incomplete" else "Chưa chạy")
         self.report_badge.set_variant("green" if status == "completed" else "amber" if status else "neutral")
-        if body:
-            lines = [tr(f"Trạng thái: {status or '—'}")]
-            for key, title in (("completed_trials", "Kỳ đã chạy"), ("tested_draws", "Kỳ kiểm chứng"), ("method", "Phương pháp"), ("conclusion", "Kết luận"), ("note", "Ghi chú")):
-                if key in body:
-                    lines.append(f"{tr(title)}: {tr(str(body[key]))}")
+        self.report_panel.setVisible(bool(body))
+        if not body:
+            self.report_card.title.setText("Báo cáo hiện tại")
+            self.report_metric.hide()
+            self.report.hide()
+            bind_text(self.report_json_button, "setText", "Xem dữ liệu JSON")
+            self.report_detail.setText("Bấm Chạy kiểm chứng hoặc Chạy mô phỏng để bắt đầu.")
+            return
+        locale = QLocale("vi_VN" if self.language == "vi" else "en_US")
+        if "ticket" in body:
+            self.render_simulation_report(body, locale)
+        else:
+            self.render_backtest_report(body, locale)
+
+    def set_report_table(self, headers, rows):
+        widget = self.report_table
+        widget.setVisible(bool(rows))
+        widget.setColumnCount(len(headers))
+        widget.setHorizontalHeaderLabels([tr(text) for text in headers])
+        for column, text in enumerate(headers):
+            widget.horizontalHeaderItem(column).setData(Qt.ItemDataRole.UserRole + 2, text)
+        fill(widget, rows)
+        widget.setFixedHeight(widget.horizontalHeader().sizeHint().height() + sum(widget.rowHeight(row) for row in range(len(rows))) + 2)
+
+    def render_simulation_report(self, body, locale):
+        self.report_card.title.setText("Kết quả mô phỏng")
+        ticket = body["ticket"]
+        main = ticket.get("main", [])
+        if "play" in ticket:
+            play = ticket["play"]
+            value = main[0] if main else None
+            choice = tr(SIZE_LABELS[value]) if play == "size" else str(value) if value is not None else ""
+            ticket_text = " · ".join(part for part in (tr(BINGO_LABELS[play]), choice) if part)
+        else:
+            ticket_text = " · ".join(f"{value:02}" if isinstance(value, int) else value for value in main)
+            if "special" in ticket:
+                ticket_text += "  |  " + tr("Số đặc biệt {0}").format(f"{ticket['special']:02}")
+        done = body.get("completed_trials", 0)
+        requested = body.get("requested_trials", done)
+        counts = body.get("prize_tiers", body.get("tiers", {}))
+        wins = body.get("winning_trials", done - counts.get("Không trúng", 0))
+        lines = [tr("Vé đã thử: {0}").format(ticket_text), tr("Đã mô phỏng {0}/{1} kỳ.").format(locale.toString(done), locale.toString(requested))]
+        self.report_metric.setVisible(bool(done and counts))
+        if done and counts:
+            self.report_metric.setText(locale.toString(100 * wins / done, "f", 2) + "%")
+            lines.insert(0, tr("Tỷ lệ kỳ có ít nhất một giải"))
+            lines.append(tr("{0} kỳ có ít nhất một giải.").format(locale.toString(wins)))
+        self.report_detail.setText("\n\n".join(lines))
+        rows = [[tier, locale.toString(count), locale.toString(100 * count / done, "f", 2) + "%"]
+                for tier, count in sorted(counts.items(), key=lambda entry: (entry[0] == "Không trúng", -entry[1]))] if done else []
+        self.set_report_table(("Hạng giải", "Số kỳ", "Tỷ lệ quan sát"), rows)
+        notes = [tr("Tỷ lệ trong bảng đến từ các kỳ giả lập đã chạy. Giải hiếm có thể không xuất hiện trong lần thử.")]
+        if body.get("tiers_overlap"):
+            notes.append(tr("Một vé Max có thể trúng nhiều hạng trong cùng kỳ."))
+        self.report_reading_note.setText(" ".join(notes))
+
+    def render_backtest_report(self, body, locale):
+        self.report_card.title.setText("Kết quả kiểm chứng")
+        summary = body.get("summary", {})
+        primary = summary.get("holdout") or summary.get("development")
+        self.report_metric.setVisible(bool(primary))
+        rows = []
+        for phase, result in summary.items():
+            scope = "Nhóm kỳ cuối" if phase == "holdout" else "Nhóm kỳ đầu" if "holdout" in summary else "Các kỳ đã thử"
+            delta = round(100 * result["difference"], 2)
+            difference = ("+" if delta > 0 else "") + locale.toString(delta or 0.0, "f", 2)
+            rows.append([f"{tr(scope)} · {locale.toString(result['draws'])}",
+                         locale.toString(100 * result["strategy_win_rate"], "f", 2) + "%",
+                         locale.toString(100 * result["baseline_mean_win_rate"], "f", 2) + "%",
+                         difference])
+        self.set_report_table(("Kỳ đối chiếu", "Phương pháp", "Chọn ngẫu nhiên", "Chênh lệch (điểm %)"), rows)
+        if primary:
+            rate = primary["strategy_win_rate"]
+            self.report_metric.setText(locale.toString(100 * rate, "f", 2) + "%")
+            lines = [
+                tr("Tỷ lệ vé trúng · Nhóm kỳ cuối" if "holdout" in summary else "Tỷ lệ vé trúng của phương pháp"),
+                tr("{0}/{1} vé trúng trong {2} kỳ đã lưu.").format(
+                    locale.toString(round(rate * primary["tickets"])), locale.toString(primary["tickets"]), locale.toString(primary["draws"])),
+                tr("Chọn ngẫu nhiên đạt trung bình {0}%.").format(locale.toString(100 * primary["baseline_mean_win_rate"], "f", 2)),
+            ]
+            method = AI_LABEL if body.get("method") == AI_METHOD else METHOD_LABELS.get(body.get("method"))
+            if method:
+                lines.append(tr(method.replace("90 kỳ", f"{body.get('warmup', 90)} kỳ")))
+            play = BINGO_LABELS.get(body.get("play_context"))
+            if play:
+                lines.append(f"{tr('Cách chơi')} · {tr(play)}")
+            if body.get("warmup"):
+                if body.get("target_draw_id"):
+                    lines.append(tr("Dùng {0} kỳ ngay trước kỳ đối chiếu #{1}.").format(
+                        locale.toString(body["warmup"]), body["target_draw_id"]))
+                else:
+                    lines.append(tr("{0} kỳ đầu dùng làm dữ liệu ban đầu.").format(locale.toString(body["warmup"])))
             self.report_detail.setText("\n\n".join(lines))
         else:
-            self.report_detail.setText("Bấm Chạy kiểm chứng hoặc Chạy mô phỏng để bắt đầu.")
+            self.report_detail.setText("Chưa kiểm chứng xong kỳ nào.")
+        self.report_reading_note.setText("Chênh lệch là tỷ lệ của phương pháp trừ tỷ lệ chọn ngẫu nhiên. Kết quả chỉ mô tả các kỳ đã thử, chưa chứng minh lợi thế ở kỳ tiếp theo.")
+        if body.get("method") == AI_METHOD:
+            self.report_reading_note.set_parts(
+                "AI được thử trên một kỳ. Model có thể đã biết kết quả công khai từ trước.",
+                " ",
+                "Chênh lệch là tỷ lệ của phương pháp trừ tỷ lệ chọn ngẫu nhiên. Kết quả chỉ mô tả các kỳ đã thử, chưa chứng minh lợi thế ở kỳ tiếp theo.",
+            )
+        elif body.get("play_context") == "any_triple":
+            self.report_reading_note.setText("Ba số bất kỳ có một lựa chọn. Mọi phương pháp đối chiếu cùng một vé nên tỷ lệ bằng nhau.")
 
     def ai_page(self, layout):
         head = self.heading(layout, "AI & cấu hình", "Tìm nguồn trên web và giải thích; dữ liệu kỳ quay được xác minh riêng.")
@@ -773,7 +929,14 @@ class Desktop(QMainWindow):
         about.body.addLayout(links)
         left_column = QWidget(); left_stack = QVBoxLayout(left_column)
         left_stack.setContentsMargins(0, 0, 0, 0); left_stack.setSpacing(12)
-        left_stack.addWidget(language); left_stack.addWidget(about); left_stack.addStretch()
+        updates = SectionCard("Cập nhật LottoLens", "reload")
+        self.app_update_input = ThemeToggle(); self.app_update_input.setText("Tự động")
+        self.app_update_input.setFixedWidth(120)
+        self.app_update_input.setChecked(self.preferences["auto_app_updates"])
+        bind_text(self.app_update_input, "setAccessibleName", "Tự động kiểm tra bản cập nhật LottoLens")
+        updates.body.addWidget(self.app_update_input)
+        updates.body.addWidget(label("Kiểm tra GitHub khi mở app và mỗi giờ khi app đang chạy. Bấm Lưu cài đặt để áp dụng.", "subtle"))
+        left_stack.addWidget(language); left_stack.addWidget(updates); left_stack.addWidget(about); left_stack.addStretch()
         grid.addWidget(left_column, 0, 0); layout.addWidget(content)
         row = QHBoxLayout(); row.addWidget(label("Bấm Lưu cài đặt để áp dụng lịch tự động và ghi nhớ các lựa chọn. Chỉ thu gọn lịch sử sau một lần cập nhật hợp lệ.", "caption"), 1)
         self.preferences_save_button = self.icon_button("Lưu cài đặt", "save", self.save_interface_preferences, True)
@@ -781,7 +944,8 @@ class Desktop(QMainWindow):
 
     def save_interface_preferences(self):
         body = {"language": self.language_choice.currentData(), "history_limits": {game: spin.value() for game, spin in self.draw_limit_inputs.items()}, "analysis_window": self.analysis_window,
-                "auto_updates": {game: {"enabled": toggle.isChecked(), "time": self.auto_time_inputs[game].time().toString("HH:mm")} for game, toggle in self.auto_update_inputs.items()}}
+                "auto_updates": {game: {"enabled": toggle.isChecked(), "time": self.auto_time_inputs[game].time().toString("HH:mm")} for game, toggle in self.auto_update_inputs.items()},
+                "auto_app_updates": self.app_update_input.isChecked()}
         undo = None
         if body["auto_updates"] != self.preferences["auto_updates"] or any(value["enabled"] for value in body["auto_updates"].values()):
             try:
@@ -797,8 +961,115 @@ class Desktop(QMainWindow):
                 except RuntimeError as error:
                     raise ValueError("Không lưu được cài đặt và chưa khôi phục đủ lịch Windows; hãy lưu lại để sửa lịch.") from error
             raise
+        changed = body["auto_app_updates"] != self.preferences["auto_app_updates"]
         self.preferences = body
         self.notice.setText("Đã lưu cài đặt giao diện.")
+        if changed and self.app_updates_ready:
+            if not body["auto_app_updates"] and self.pending_app_update and not self.pending_app_update[1]:
+                self.pending_app_update = None
+            self.start_app_update_checks()
+
+    def start_app_update_checks(self):
+        self.app_updates_ready = True
+        self.app_update_timer.stop()
+        if self.preferences["auto_app_updates"]:
+            self.app_update_timer.start()
+            QTimer.singleShot(0, self, self.check_app_updates)
+
+    def check_app_updates(self, *, manual=False):
+        # Reject duplicate clicks here so Qt can keep focus on the update button.
+        if self.update_check_worker or self.closing or (not manual and not self.preferences["auto_app_updates"]):
+            return
+        results = []
+
+        def finished():
+            worker, self.update_check_worker = self.update_check_worker, None
+            worker.deleteLater()
+            if self.closing:
+                self.close()
+                return
+            if not self.isVisible() or not results:
+                return
+            if not manual and not self.preferences["auto_app_updates"]:
+                return
+            result = results[0]
+            if result["status"] == "available":
+                release = result["release"]
+                if manual or self.prompted_release != release.version:
+                    self.pending_app_update = (release, manual)
+                    self.show_pending_app_update()
+            elif manual:
+                self.notice.setText({
+                    "unpublished": "GitHub chưa có bản phát hành LottoLens.",
+                    "current": "Bạn đang dùng bản LottoLens mới nhất.",
+                    "failed": result.get("message", ""),
+                }[result["status"]])
+
+        self.update_check_worker = worker = Worker(lambda *_: check_release(), self)
+        worker.result.connect(results.append)
+        worker.failed.connect(lambda message: results.append({"status": "failed", "message": message}))
+        worker.finished.connect(finished)
+        if manual:
+            self.notice.setText("Đang kiểm tra bản cập nhật LottoLens…")
+        worker.start()
+
+    def show_pending_app_update(self):
+        if self.closing or self.worker or not self.isVisible() or not self.pending_app_update:
+            return
+        if QApplication.activeModalWidget():
+            QTimer.singleShot(1000, self, self.show_pending_app_update)
+            return
+        release, _manual = self.pending_app_update
+        self.pending_app_update = None
+        self.prompted_release = release.version
+        self.offer_app_update(release)
+
+    def offer_app_update(self, release):
+        self.notice.setText(f"Đã tìm thấy LottoLens V{release.version}.")
+        can_install = bool(release.url and installed_data())
+        message = (f"Đã có LottoLens V{release.version}. Tải và cài vào thư mục hiện tại? App sẽ đóng để cập nhật và giữ lại dữ liệu."
+                   if can_install else f"Đã có LottoLens V{release.version}. Bạn có muốn xem bản phát hành trên GitHub?")
+        dialog = QMessageBox(QMessageBox.Icon.Information, APP_NAME, tr(message), parent=self)
+        accept = dialog.addButton(tr("Cập nhật ngay" if can_install else "Mở bản phát hành"), QMessageBox.ButtonRole.AcceptRole)
+        later = dialog.addButton(tr("Để sau"), QMessageBox.ButtonRole.RejectRole)
+        dialog.setDefaultButton(later)
+        dialog.exec()
+        confirmed = dialog.clickedButton() == accept
+        dialog.deleteLater()
+        if confirmed and can_install:
+            self.guard(lambda: self.install_app_update(release))
+        elif confirmed:
+            QDesktopServices.openUrl(QUrl(RELEASE_PAGE))
+
+    def install_app_update(self, release):
+        if self.worker or self.closing:
+            raise ValueError("Đợi thao tác hiện tại hoàn tất hoặc bấm Hủy.")
+        folder = installed_data().parent
+        fd, filename = mkstemp(prefix="LottoLens-Setup-", suffix=".exe")
+        os.close(fd)
+        path = Path(filename)
+        ready = []
+
+        def download(cancel, progress, _delta):
+            download_setup(release, path, cancel,
+                           lambda done, total: progress((done + 1023) // 1024, (total + 1023) // 1024))
+            return {}
+
+        def finished():
+            if ready and not self.closing:
+                language = "vietnamese" if self.language == "vi" else "english"
+                try:
+                    subprocess.Popen([str(path), "/SILENT", "/SP-", "/NORESTART", f"/LANG={language}",
+                                      f"/DIR={folder}", f"/UPDATEPID={os.getpid()}"], cwd=folder)
+                except OSError:
+                    self.notice.setText("Không mở được bộ cài LottoLens. Hãy kiểm tra lại cập nhật để thử lại.")
+                else:
+                    self.close()
+                    return
+            path.unlink(missing_ok=True)
+
+        self.start_task(download, ready.append, "Đang tải bộ cài LottoLens…")
+        self.worker.finished.connect(finished)
 
     def apply_language(self, language):
         if language == self.language:
@@ -849,35 +1120,56 @@ class Desktop(QMainWindow):
     def play_context(self):
         return self._play_context if self.rule.kind == "dice" else None
 
-    def build_ticket_controls(self, layout):
+    def suggestion_play_context(self):
+        return self._suggestion_play if self.rule.kind == "dice" else None
+
+    def build_ticket_controls(self, layout, choice_label="Lựa chọn để tính xác suất", *, for_suggestions=False):
         box = QFrame(); box.setObjectName("fieldPanel")
         grid = QGridLayout(box); grid.setContentsMargins(0, 0, 0, 0); grid.setSpacing(8)
         play = ThemedComboBox(); choice = ThemedComboBox()
+        if for_suggestions:
+            play.addItem("Kết quả giả lập (3 số)", "draw")
         for key, text in BINGO_LABELS.items():
-            play.addItem(text, key)
+            if not for_suggestions or key != "any_triple":
+                play.addItem(text, key)
         first, second = QLineEdit("007"), QLineEdit("123")
         for field in (first, second):
             field.setMaxLength(3)
             field.setValidator(QRegularExpressionValidator(QRegularExpression("[0-9]{3}"), field))
             field.setMinimumWidth(0)
             bind_text(field, "setToolTip", "Giữ đủ ba chữ số, kể cả số 0 đầu.")
-        labels = [label(text, "caption") for text in ("Cách chơi", "Vé đang xem xác suất", "Bộ 1", "Bộ 2")]
+        labels = [label(text, "caption") for text in (
+            "Kiểu bộ tham khảo" if for_suggestions else "Cách chơi", choice_label, "Bộ 1", "Bộ 2"
+        )]
         for column, (caption, field) in enumerate(zip(labels, (play, choice, first, second))):
             grid.addWidget(caption, 0, column); grid.addWidget(field, 1, column); grid.setColumnStretch(column, 1)
             caption.setBuddy(field)
-        item = {"box": box, "play": play, "choice": choice, "first": first, "second": second, "labels": labels}
+        item = {"box": box, "play": play, "choice": choice, "first": first, "second": second,
+                "labels": labels, "for_suggestions": for_suggestions}
         self.ticket_controls.append(item)
         self.actions.extend((play, choice, first, second))
-        play.currentIndexChanged.connect(lambda: self.change_play(play.currentData()))
+        change_play = self.change_suggestion_play if for_suggestions else self.change_play
+        play.currentIndexChanged.connect(lambda: change_play(play.currentData()))
         choice.currentIndexChanged.connect(lambda: self.change_sample(choice.currentData()))
         for field in (first, second):
             field.editingFinished.connect(lambda: self.guard(lambda: self.change_max_sample(first.text(), second.text())))
         layout.addWidget(box)
 
     def change_play(self, context):
+        if context == self._play_context:
+            return
         self._play_context = context
         self._bingo_sample = bingo_choices(context)[0]
         self.update_ticket_controls(); self.refresh_odds(); self.refresh_overview()
+        self.update_verify_mode()
+
+    def change_suggestion_play(self, context):
+        if context == self._suggestion_play:
+            return
+        self._suggestion_play = context
+        self.clear_generated()
+        self.update_ticket_controls()
+        self.update_analysis_copy()
 
     def change_sample(self, selection):
         if selection is not None:
@@ -892,25 +1184,40 @@ class Desktop(QMainWindow):
 
     def update_ticket_controls(self):
         rule = self.rule
+        fixed = self.play_context() == "any_triple"
         for controls in self.ticket_controls:
             controls["box"].setVisible(rule.kind != "set")
             fields = (controls["play"], controls["choice"], controls["first"], controls["second"])
             blockers = [QSignalBlocker(field) for field in fields]
-            controls["play"].setCurrentIndex(controls["play"].findData(self._play_context))
+            for_suggestions = controls["for_suggestions"]
+            context = self._suggestion_play if for_suggestions else self._play_context
+            controls["play"].setCurrentIndex(controls["play"].findData(context))
             choice = controls["choice"]; choice.clear()
-            for selection in bingo_choices(self._play_context):
-                value = selection["main"][0] if selection["main"] else None
-                text = SIZE_LABELS[value] if selection["play"] == "size" else "Ba số bất kỳ" if value is None else f"{value:02}"
-                choice.addItem(text, selection)
-            choice.setCurrentIndex(choice.findData(self._bingo_sample))
+            if rule.kind == "dice" and not for_suggestions and not fixed:
+                for selection in bingo_choices(self._play_context):
+                    value = selection["main"][0]
+                    text = SIZE_LABELS[value] if selection["play"] == "size" else f"{value:02}"
+                    choice.addItem(text, selection)
+                choice.setCurrentIndex(choice.findData(self._bingo_sample))
             controls["first"].setText(self._max_sample[0]); controls["second"].setText(self._max_sample[1])
             for index, field in enumerate(fields):
                 visible = rule.kind == "dice" if index < 2 else rule.kind == "triples" and (index == 2 or rule.selected == 2)
+                if index == 1 and (fixed or for_suggestions):
+                    visible = False
                 field.setVisible(visible); controls["labels"][index].setVisible(visible)
                 controls["box"].layout().setColumnStretch(index, 1 if visible else 0)
             del blockers
-        self.count.setMaximum(min(100, ticket_capacity(rule, self.play_context())))
-        self.count_hint.setText(f"Tối đa {self.count.maximum()} bộ khác nhau")
+        context = self.suggestion_play_context()
+        self.count.setMaximum(100 if context == "draw" else min(100, ticket_capacity(rule, context)))
+        self.count_hint.setText("Tối đa 100 bộ mỗi lượt" if context == "draw" else f"Tối đa {self.count.maximum()} bộ khác nhau")
+        count = min(5, ticket_capacity(rule, self.play_context()))
+        self.verify_setup.hint.setText(f"{count} vé/kỳ")
+        self.verify_play_note.setVisible(rule.kind == "dice")
+        self.verify_play_note.setText(f"Bingo18 dùng cách chơi bên dưới cho cả hai phép thử. Kiểm chứng chọn {count} vé khác nhau mỗi kỳ.")
+        self.simulation_ticket_note.setText(
+            "Dùng bộ đầu tiên vừa tạo. Nếu chưa tạo, app dùng một vé mẫu."
+            if rule.kind == "set" else "Dùng vé đã chọn ở trên. Dữ liệu mô phỏng không lưu vào lịch sử."
+        )
 
     def refresh_odds(self):
         rule = self.rule
@@ -932,7 +1239,8 @@ class Desktop(QMainWindow):
             self.jackpot_card.delta.setText(f"{float(probability):.8%} mỗi vé · {rule.name}")
             if rule.kind == "dice":
                 value = ticket.selections["main"][0] if ticket.selections["main"] else ""
-                self.ticket_note.set_parts("Vé đang xem: ", BINGO_LABELS[ticket.selections["play"]], " · ", SIZE_LABELS.get(value, str(value)), " · 10.000đ")
+                choice = (" · ", SIZE_LABELS.get(value, str(value))) if value != "" else ()
+                self.ticket_note.set_parts("Vé đang xem: ", BINGO_LABELS[ticket.selections["play"]], *choice, " · 10.000đ")
             else:
                 self.ticket_note.setText(f"Vé đang xem: {' / '.join(ticket.selections['main'])} · 10.000đ" if rule.kind == "triples" else f"Vé mẫu: 1..{rule.selected} · {rule.price_vnd:,}đ / vé")
             if rule.kind != "set":
@@ -942,12 +1250,35 @@ class Desktop(QMainWindow):
         except ValueError as error:
             fill(self.odds_table, []); self.odds_note.setText(str(error)); self.suggestion_odds.setText("Chưa bật xác suất")
         self.odds_content.setVisible(rule.math_ready); self.odds_empty.setVisible(not rule.math_ready)
-        self.suggestion_odds_hint.setVisible(rule.kind != "set")
+        self.suggestion_odds.setVisible(rule.kind != "dice")
+        self.suggestion_odds_hint.setVisible(rule.kind == "triples")
 
     def update_analysis_copy(self):
         window = self.analysis_window
-        self.suggestion_description.setText(f"Áp dụng tần suất {window} kỳ và xác suất nền để tạo trọng số chọn số.")
+        draw_preview = self.suggestion_play_context() == "draw"
+        if draw_preview:
+            description = "Tạo các bộ ba có dạng như kết quả Bingo18."
+        elif self.rule.kind == "dice":
+            description = "Tạo lựa chọn theo cửa chơi. Xem xác suất của từng lựa chọn ở trang Xác suất."
+        else:
+            description = f"Áp dụng tần suất {window} kỳ và xác suất nền để tạo trọng số chọn số."
+        self.suggestion_description.setText(description)
+        self.method_box.show()
         self.method_requirements.setText(f"Bayes và tần suất cần ít nhất {window} kỳ. Đồng đều dùng được khi chưa có lịch sử.")
+        self.target_box.setVisible(not draw_preview)
+        self.suggestion_fields.setColumnStretch(1, 0 if draw_preview else 2)
+        self.save_button.setVisible(not draw_preview)
+        self.saved_label.setVisible(not draw_preview)
+        self.suggestion_details.show()
+        bind_text(self.suggest_button, "setText", "Tạo kết quả giả lập" if draw_preview else "Tạo bộ số tham khảo")
+        self.suggestion_card.title.setText("Kết quả giả lập" if draw_preview else "Bộ số vừa tạo")
+        column_title = "KẾT QUẢ" if draw_preview else "SỐ ĐƯỢC CHỌN"
+        column = self.suggestion_table.horizontalHeaderItem(1)
+        column.setData(Qt.ItemDataRole.UserRole + 2, column_title); column.setText(tr(column_title))
+        self.suggestion_placeholder.setText(
+            "Bấm Tạo kết quả giả lập để xem các bộ ba." if draw_preview else "Chọn phương pháp và bấm Tạo để xem bộ số tham khảo."
+        )
+        self.ai_history_callout.show()
         self.ai_history_callout.text.setText(f"Chọn AI phân tích sẽ gửi {window} kỳ tới nhà cung cấp và có thể tính phí. Không tự retry khi lỗi.")
         for combo, method_window in ((self.method, window), (self.verify_method, self.backtest_history_window)):
             labels = {"bayes90_v1": f"Xác suất–thống kê {method_window} kỳ (Bayes)", "frequency90_laplace1_v1": f"Tần suất {method_window} kỳ", AI_METHOD: f"AI phân tích lịch sử ({method_window} kỳ)"}
@@ -961,11 +1292,11 @@ class Desktop(QMainWindow):
         self.verify_setup.hint.setVisible(not (adjusted or insufficient))
         self.verify_adjustment.setText("Chưa đủ dữ liệu" if insufficient else f"{window} → {effective} kỳ")
         if insufficient:
-            requirements = "Cần ít nhất 2 kỳ đã lưu: một kỳ làm lịch sử và một kỳ đối chiếu. AI chưa hỗ trợ kiểm chứng hàng loạt."
+            requirements = "Cần ít nhất 2 kỳ đã lưu: một kỳ làm lịch sử và một kỳ đối chiếu."
         elif adjusted:
-            requirements = f"Đặt {window} kỳ; kiểm chứng tự dùng {effective} kỳ để dành {len(self.draws) - effective} kỳ đối chiếu. Cài đặt chung giữ nguyên. AI chưa hỗ trợ kiểm chứng hàng loạt."
+            requirements = f"Đặt {window} kỳ; kiểm chứng tự dùng {effective} kỳ để dành {len(self.draws) - effective} kỳ đối chiếu."
         else:
-            requirements = f"Cần ít nhất {effective + 1} kỳ. Chạy một phương pháp đang chọn; AI chưa hỗ trợ kiểm chứng hàng loạt."
+            requirements = f"Cần ít nhất {effective + 1} kỳ."
         self.verify_requirements.setText(requirements)
         bind_text(self.verify_adjustment, "setToolTip", requirements)
         text = f"{window} kỳ gần nhất"
@@ -975,7 +1306,9 @@ class Desktop(QMainWindow):
         button.setProperty("i18n_setText", f"{window} kỳ"); button.setText(tr(f"{window} kỳ"))
         self.history_badge.setText(f"Đủ {window} kỳ" if len(self.draws) >= window else f"{len(self.draws)} / {window} kỳ")
         self.history_badge.set_variant("green" if len(self.draws) >= window else "amber")
+        self.history_badge.show()
         self.update_method_note()
+        self.update_verify_mode()
 
     def set_analysis_window(self, window):
         if type(window) is not int or not 1 <= window <= 2000:
@@ -991,6 +1324,8 @@ class Desktop(QMainWindow):
         return min(self.analysis_window, max(1, len(self.draws) - 1))
 
     def generation_help(self):
+        if self.suggestion_play_context() == "draw":
+            return "Bấm Tạo kết quả giả lập để xem các bộ ba."
         return f"Chọn phương pháp rồi bấm Tạo bộ số tham khảo. Bayes và tần suất tính tại máy; AI phân tích {self.analysis_window} kỳ bằng model đã cấu hình. Chưa có bằng chứng các cách chọn này tăng xác suất trúng."
 
     def refresh(self):
@@ -1062,11 +1397,14 @@ class Desktop(QMainWindow):
             rule, method = self.rule, self.method.currentData()
             self.generated = None
             fill(self.suggestion_table, []); self.explanation.clear()
+            context = self.suggestion_play_context()
+            if context == "draw":
+                self.make_bingo_results()
+                return
             if method == AI_METHOD:
                 self.make_ai_suggestions()
                 return
             window = self.analysis_window
-            context = self.play_context()
             tickets = generate(rule, self.draws, self.count.value(), method, SystemRandom(), history_window=window, play_context=context)
             detail = explain_ticket(rule, self.draws, tickets[0], method, history_window=window, play_context=context)
             snapshot = self.store.snapshot(rule, self.draws)
@@ -1097,12 +1435,45 @@ class Desktop(QMainWindow):
 
     def update_method_note(self):
         window = self.analysis_window
+        if self.suggestion_play_context() == "draw" and self.method.currentData() != AI_METHOD:
+            self.method_note.setText(
+                f"Tần suất và Bayes dùng {window} kỳ, tính riêng từng vị trí trong bộ ba. Ngẫu nhiên đồng đều dùng mức nền 1/6. Số có thể lặp."
+            )
+            return
         self.method_note.setText(f"AI nhận {window} kỳ đã lưu, dùng model ở AI & cấu hình với mức suy luận High. Bấm tạo sẽ gửi dữ liệu tới nhà cung cấp và có thể tính phí; không dùng web search." if self.method.currentData() == AI_METHOD else f"Tính tại máy, không gọi AI. Phương pháp Bayes và tần suất cần ít nhất {window} kỳ.")
+
+    def make_bingo_results(self):
+        rule, history = self.rule, list(self.draws)
+        count, method, window = self.count.value(), self.method.currentData(), self.analysis_window
+        method_label = self.method.itemData(self.method.currentIndex(), Qt.ItemDataRole.UserRole + 2)
+
+        def complete(result):
+            fill(self.suggestion_table, [[i, number_text({"main": row})] for i, row in enumerate(result["results"], 1)])
+            if method == AI_METHOD:
+                self.explanation.setPlainText("\n\n".join((
+                    tr(method_label), tr("Giải thích do AI cung cấp:"), result["explanation"],
+                    tr("Chưa có bằng chứng cách chọn này làm tăng xác suất trúng."),
+                )))
+            else:
+                self.explanation.set_ui_text("\n".join((
+                    method_label, f"Dùng {result['history_used']} kỳ để tạo trọng số theo từng vị trí.",
+                    "Chưa có bằng chứng cách chọn này làm tăng xác suất trúng.",
+                )))
+            self.notice.setText(f"Đã tạo {count} kết quả giả lập.")
+
+        if method == AI_METHOD:
+            request = build_result_request(self.current_config(), rule, history, count, window)
+            self.start_task(
+                lambda cancel, progress, delta: generate_ai_results(request, count, cancel),
+                complete, f"Đang gửi {window} kỳ cho AI phân tích và đề xuất bộ số…",
+            )
+        else:
+            complete(generate_results(rule, history, count, method, SystemRandom(), window))
 
     def make_ai_suggestions(self):
         rule, history, count, config = self.rule, list(self.draws), self.count.value(), self.current_config()
         window = self.analysis_window
-        context = self.play_context()
+        context = self.suggestion_play_context()
         build_generation_request(config, rule, history, count, history_window=window, play_context=context)
         snapshot = self.store.snapshot(rule, history)
         self.explanation.set_ui_text("Đang nhận phân tích AI; chỉ dùng bộ số sau khi phản hồi hoàn tất và kiểm tra hợp lệ.\n\n")
@@ -1159,7 +1530,7 @@ class Desktop(QMainWindow):
                                     self.window_size, self.stats_segments, self.verify_method,
                                     self.history_search, self.history_filter]:
             widget.setEnabled(False)
-        for widget in [self.language_choice, self.analysis_window_input, *self.draw_limit_inputs.values(), *self.auto_update_inputs.values(), *self.auto_time_inputs.values()]:
+        for widget in [self.language_choice, self.analysis_window_input, self.app_update_input, *self.draw_limit_inputs.values(), *self.auto_update_inputs.values(), *self.auto_time_inputs.values()]:
             widget.setEnabled(False)
         self.progress.setRange(0, 0); self.progress.show(); self.cancel_button.show()
         self.status_text.setText("●  Đang xử lý")
@@ -1187,7 +1558,7 @@ class Desktop(QMainWindow):
                                     self.window_size, self.stats_segments, self.verify_method,
                                     self.history_search, self.history_filter]:
             widget.setEnabled(True)
-        for widget in [self.language_choice, self.analysis_window_input, *self.draw_limit_inputs.values(), *self.auto_update_inputs.values()]:
+        for widget in [self.language_choice, self.analysis_window_input, self.app_update_input, *self.draw_limit_inputs.values(), *self.auto_update_inputs.values()]:
             widget.setEnabled(True)
         for game, clock in self.auto_time_inputs.items():
             clock.setEnabled(self.auto_update_inputs[game].isChecked())
@@ -1196,6 +1567,8 @@ class Desktop(QMainWindow):
         self.refresh_generation_view()
         if self.closing:
             self.close()
+        else:
+            QTimer.singleShot(0, self, self.show_pending_app_update)
 
     def sync(self):
         rule, limit, path = self.rule, self.history_limit.value(), self.store.path
@@ -1307,29 +1680,79 @@ class Desktop(QMainWindow):
             self.notice.setText(result["notice"])
         self.start_task(task, complete, "Đang test model với endpoint tự động…" if test else "Đang tìm nguồn trên web với endpoint tự động…", streaming=True)
 
+    def update_verify_mode(self):
+        fixed = self.play_context() == "any_triple"
+        uses_ai = self.verify_method.currentData() == AI_METHOD and not fixed
+        bind_text(self.verify_run_button, "setText", "Chạy kiểm chứng AI" if uses_ai else "Chạy kiểm chứng")
+        if uses_ai:
+            self.verify_run_note.setText(
+                f"Bấm chạy sẽ gửi {self.backtest_history_window} kỳ trước kỳ mới nhất tới model đã cấu hình và có thể tính phí. App chấm tại máy trên một kỳ, không dùng web search."
+            )
+        elif fixed:
+            self.verify_run_note.setText("Ba số bất kỳ dùng một vé cố định cho cả phương pháp và mốc ngẫu nhiên. App đối chiếu tại máy.")
+        else:
+            self.verify_run_note.setText("Xem cách chọn số đã trúng bao nhiêu vé trong lịch sử so với 200 lượt chọn ngẫu nhiên.")
+
+    def start_verification(self):
+        if self.verify_method.currentData() == AI_METHOD and self.play_context() != "any_triple":
+            self.start_ai_verification()
+        else:
+            self.backtest()
+
+    def start_ai_verification(self):
+        rule, window, context = self.rule, self.backtest_history_window, self.play_context()
+        draws = self.draws[-(window + 1):]
+        if len(draws) < window + 1:
+            raise ValueError("Cần ít nhất 2 kỳ đã lưu: một kỳ làm lịch sử và một kỳ đối chiếu.")
+        count = min(5, ticket_capacity(rule, context))
+        config = self.current_config()
+        build_generation_request(config, rule, draws[:-1], count, history_window=window, play_context=context)
+        options = {"method": AI_METHOD, "seed": 42, "history_window": window, "play_context": context}
+
+        def select_tickets(history, count, cancel):
+            result = generate_with_ai(config, rule, history, count, cancel=cancel, history_window=window, play_context=context)
+            return result["tickets"]
+
+        def task(cancel, progress, delta):
+            return run_backtest(rule, draws, options, cancel=cancel, progress=progress, ai_select=select_tickets)
+
+        self.report.clear()
+        self.start_task(task, lambda report: self.show_saved_verification(report, options), "Đang kiểm chứng AI trên một kỳ đã lưu…")
+
     def backtest(self):
-        if self.rule.kind != "set":
-            raise ValueError("Kiểm chứng Max/Bingo18 chưa được bật; hiện hỗ trợ xác suất và bộ tham khảo.")
         rule, draws, method = self.rule, list(self.draws), self.method.currentData()
         window = self.backtest_history_window
+        if self.play_context() == "any_triple":
+            method = "uniform_v1"
         if method == AI_METHOD:
             raise ValueError("Phương pháp AI chưa hỗ trợ backtest hàng loạt. Chọn Bayes, tần suất hoặc đồng đều để kiểm chứng tại máy; không tự phát sinh nhiều yêu cầu API.")
+        config = {"method": method, "seed": 42, "history_window": window}
+        if rule.kind == "dice":
+            config["play_context"] = self.play_context()
         self.report.clear()
         def task(cancel, progress, delta):
-            return run_backtest(rule, draws, {"method": method, "seed": 42, "history_window": window}, cancel=cancel, progress=progress)
-        def complete(report):
-            identifier = self.store.save_report(report)
-            saved = self.store.reports()[0]
-            self.report.setPlainText(json.dumps({k: v for k, v in saved.items() if k not in ("rows", "manifest")}, ensure_ascii=False, indent=2))
-            state = "chưa hoàn tất, chỉ gồm phần đã chạy" if saved["status"] != "completed" else "hoàn tất"
-            self.notice.set_parts(f"Đã lưu báo cáo #{identifier}: ", state, ". ", saved["conclusion"])
-        self.start_task(task, complete, "Đang kiểm chứng theo thời gian; không dùng dữ liệu kỳ đích để tạo vé…", allow_partial=True)
+            return run_backtest(rule, draws, config, cancel=cancel, progress=progress)
+        self.start_task(task, lambda report: self.show_saved_verification(report, config),
+                        "Đang kiểm chứng theo thời gian; không dùng dữ liệu kỳ đích để tạo vé…", allow_partial=True)
+
+    def show_saved_verification(self, report, config):
+        identifier = self.store.save_report(report)
+        saved = self.store.reports()[0]
+        display = {k: v for k, v in saved.items() if k not in ("rows", "manifest")}
+        display["method"] = config["method"]
+        if config["method"] == AI_METHOD:
+            display["target_draw_id"] = saved["rows"][0]["target_draw_id"]
+        if "warmup" in saved.get("manifest", {}):
+            display["warmup"] = saved["manifest"]["warmup"]
+        if config.get("play_context"):
+            display["play_context"] = config["play_context"]
+        self.report.setPlainText(json.dumps(display, ensure_ascii=False, indent=2))
+        state = "chưa hoàn tất, chỉ gồm phần đã chạy" if saved["status"] != "completed" else "hoàn tất"
+        self.notice.set_parts(f"Đã lưu báo cáo #{identifier}: ", state, ". ", saved["conclusion"])
 
     def run_simulation(self):
         rule = self.rule
-        if rule.kind != "set":
-            raise ValueError("Mô phỏng hiện hỗ trợ Mega, Power, Lotto và Keno; trò đang chọn còn chờ xác minh luật.")
-        ticket = self.generated[2][0] if self.generated else self.sample_ticket()
+        ticket = self.generated[2][0] if self.generated and rule.kind == "set" else self.sample_ticket()
         self.report.clear()
         def task(cancel, progress, delta):
             return simulate(rule, ticket, 10_000, 42, cancel=cancel, progress=progress)
@@ -1340,8 +1763,13 @@ class Desktop(QMainWindow):
         self.start_task(task, complete, "Đang mô phỏng 10.000 kỳ…", allow_partial=True)
 
     def closeEvent(self, event):
-        if self.worker:
-            self.closing = True; self.cancel_task(); event.ignore()
+        self.closing = True
+        if self.worker or self.update_check_worker:
+            if self.worker:
+                self.cancel_task()
+            if self.update_check_worker:
+                self.update_check_worker.cancelled.set()
+            event.ignore()
         else:
             if self.isVisible():
                 try:
@@ -1355,6 +1783,7 @@ class Desktop(QMainWindow):
                 except OSError:
                     self.notice.setText("Chưa lưu được kích thước cửa sổ. Lần mở sau sẽ dùng trạng thái đã lưu trước đó.")
             self.history_poll.stop()
+            self.app_update_timer.stop()
             self.store.close(); event.accept()
 
 
@@ -1370,4 +1799,5 @@ def main(db_path=None):
         window.close()
         return 0
     show_onboarding(window, first_run=True)
+    window.start_app_update_checks()
     return application.exec()

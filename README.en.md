@@ -3,11 +3,12 @@
 <p align="center">Vietlott history, probability and statistics — in a desktop app.</p>
 <p align="center"><a href="README.md">Tiếng Việt</a> · <strong>English</strong></p>
 <p align="center">
-  <img src="https://img.shields.io/badge/version-0.2.0-C81E33" alt="Version 0.2.0">
+  <img src="https://img.shields.io/badge/version-0.8.0-C81E33" alt="Version 0.8.0">
   <img src="https://img.shields.io/badge/platform-Windows_10%2F11-0078D4" alt="Windows 10 and 11">
   <img src="https://img.shields.io/badge/Python-3.11-3776AB" alt="Python 3.11">
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-GPLv3-blue" alt="GPLv3 license"></a>
 </p>
+<p align="center"><strong><a href="https://github.com/TKNguyenn/LottoLens/releases/download/v0.8.0/LottoLens-Setup-0.8.0.exe">Download Windows setup V0.8.0</a></strong> · <a href="https://github.com/TKNguyenn/LottoLens/releases/tag/v0.8.0">Release notes</a></p>
 
 ![LottoLens overview in dark mode](docs/images/en-overview-dark.png)
 
@@ -22,10 +23,11 @@
 - **History with sources:** fetch Vietlott results, search by draw or number and open the original source. Updates are incremental when a verified history boundary exists.
 - **Statistics and probabilities:** frequencies, heatmaps and theoretical odds, with a configurable recent-draw analysis window.
 - **Number suggestions:** uniform, frequency, Bayesian and AI methods. Save suggestions with their method and history snapshot.
-- **Local validation:** compare supported methods with random selection, using only history preceding each evaluated draw.
+- **Simulation and validation:** simulate tickets and compare methods with random selection across all seven games. Reports show winning tickets, rates and prize tiers.
 - **Per-game daily updates:** Vietnam-time schedules using Windows Task Scheduler, even while the app is closed.
 - **Vietnamese and English:** immediate language switching, light/dark gradients, a collapsible sidebar, illustrated onboarding and game guides.
 - **Optional AI:** HTTPS OpenAI-compatible endpoints, model fetching, manual model entry and streaming.
+- **App updates:** check GitHub from the sidebar, with an automatic-check setting and confirmation before the installer downloads.
 
 <details>
 <summary>See light mode</summary>
@@ -35,6 +37,14 @@
 </details>
 
 ## Getting started
+
+### Windows installer
+
+Download [LottoLens-Setup-0.8.0.exe](https://github.com/TKNguyenn/LottoLens/releases/download/v0.8.0/LottoLens-Setup-0.8.0.exe) for **Windows 10/11 x64**. To upgrade an existing copy, close LottoLens and select its current installation folder to keep using the existing `data` folder.
+
+The installer lets you choose where to store the app and its data. The final page offers desktop-shortcut and launch checkboxes. Uninstall can **keep user data** or **remove all user data**. Both options remove this installation's scheduled tasks. The installer is unsigned, so Windows may show an unknown-publisher warning.
+
+From V0.8.0, use **Check for updates** at the bottom of the sidebar. By default, the app checks at startup and every hour while open. To turn off automatic checks, go to **Settings → LottoLens updates** and click **Save settings**. The app asks before downloading a new version and verifies the installer's SHA-256.
 
 ### Run from source
 
@@ -49,12 +59,6 @@ py -3.11 -m venv .venv
 ```
 
 On first launch, the main window appears behind the policy dialog. Check **I have read** and **I accept** separately to continue to the illustrated tutorial. Reopen it through **Help** in the top bar; the policy is available under **Settings → About**.
-
-### Windows installer
-
-Check [Releases](https://github.com/TKNguyenn/LottoLens/releases) for published builds. If no setup asset is attached, run from source or [build the installer](packaging/README.md).
-
-The installer lets you choose a folder for the app and its data; Python is not required on the destination computer. The final page offers desktop-shortcut and launch checkboxes. Uninstall can **keep user data** or **remove all user data**; both remove this installation's scheduled tasks. Setup is currently unsigned, so Windows may show an unknown-publisher warning.
 
 ## How to use it
 
@@ -78,7 +82,15 @@ Use **Statistics** for frequencies and heatmaps. Use **Odds** for theoretical pr
 
 In **Number suggestions**, choose a method and count, then generate. Uniform selection works without saved history; frequency, Bayesian and AI methods need the configured analysis window. Enter an **Intended draw** only when saving for later comparison.
 
-In **Validation**, select a local method to compare with random selection. If the analysis window is 100 and only 100 draws are saved, validation uses at most 99 as input, reserves a draw for evaluation and displays a note. At least two draws are required. AI is not used for batch backtesting.
+In **Validation**, select a method to compare with random selection. If the analysis window is 100 and only 100 draws are saved, validation uses at most 99 as input, reserves a draw for evaluation and displays a note. At least two draws are required. **Run AI validation** sends the history before the latest draw to your configured model and may incur charges. The app scores the tickets on one saved draw and compares them with 200 local random-selection runs. The model may already know the public result, so treat the comparison as exploratory.
+
+Click **Run simulation** to test one ticket across 10,000 synthetic draws. For Max 3D, Max 3D Pro and Bingo18, choose the ticket on the Validation page. Bingo18 backtesting uses the same play type and up to five distinct tickets per draw. **High–Tie–Low** has three choices and **Any triple** has one.
+
+To generate rows that look like Bingo18 draw results, go to **Number suggestions → Simulated results (3 numbers)**, set the count and click **Generate simulated results**. Each row contains three numbers from 01 to 06 and may include repeats. The rows appear in the table for review. Use the **Odds** page to see the probabilities for a specific play and selection.
+
+Triple generation supports uniform, frequency, Bayesian and AI methods. Frequency and Bayesian methods count each position separately over the configured analysis window. Bayesian weights use a prior equivalent to 90 uniform draws. AI uses your configured model, may incur charges and runs when you click Generate.
+
+The validation report shows how many tickets won and compares the win rate with random selection. The simulation report shows the ticket, the number of draws with a prize, and the frequency of each prize tier in the run. Choose **Show JSON data** for the technical output.
 
 ### 4. Configure history, analysis and daily updates
 
@@ -115,12 +127,12 @@ All seven games support draw history, statistics, theoretical probabilities and 
 | Mega 6/45 | Standard ticket | Supported | Supported |
 | Power 6/55 | Standard ticket with separate bonus-number calculation | Supported | Supported |
 | Lotto 5/35 | Standard ticket with separate special-number calculation | Supported | Supported |
-| Keno pick 1–10 | Pick 1–10 tickets, probabilities by match count | By match count | Not yet supported |
-| Max 3D | Single `000–999` ticket, winning-event probabilities | Not yet supported | Not yet supported |
-| Max 3D Pro | Ordered pair of triples, identical triples allowed | Not yet supported | Not yet supported |
-| Bingo18 | All 38 choices within the modeled play groups | Not yet supported | Not yet supported |
+| Keno pick 1–10 | Pick 1–10 tickets, probabilities by match count | By match count and prize tier | Supported, including zero matches for picks 8–10 |
+| Max 3D | Single `000–999` ticket, winning-event probabilities | Supported | Supported |
+| Max 3D Pro | Ordered pair of triples, identical triples allowed | Supported | Supported, including overlapping tiers |
+| Bingo18 | All 38 choices within the modeled play groups | Supported | Supported for the selected play type |
 
-**Simulation** generates synthetic draws. **Backtesting** evaluates a number-selection method on saved draws. Keno simulation groups outcomes by match count and does not yet model all payout odds. System-entry variants and Max 3D+ need separate models. See the [support matrix](docs/game_support_matrix.md) and [source audit](docs/source_audit.md) (Vietnamese).
+Simulation and backtesting for Keno, Max 3D, Max 3D Pro and Bingo18 report wins under the modeled rules. A Max ticket can count toward several prize tiers on the same draw and counts once toward the ticket win rate. Historical payouts and expected value for these four games remain unverified. System-entry variants, Keno side plays and Max 3D+ need separate models. See the [support matrix](docs/game_support_matrix.md) and [source audit](docs/source_audit.md) (Vietnamese).
 
 ## Where is data stored?
 
@@ -151,7 +163,7 @@ python main.py odds --game keno --mode pick8
 python main.py import-csv --game mega "history.csv"
 ```
 
-The CLI has a narrower scope: it does not expose every Bingo18 ticket choice or replace all GUI controls. Run `python main.py --help`.
+Use the desktop app to simulate Max 3D, Max 3D Pro and Bingo18 tickets or select a Bingo18 play type for backtesting. Run `python main.py --help` to see the CLI commands.
 
 ## Development and checks
 

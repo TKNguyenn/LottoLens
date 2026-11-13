@@ -33,11 +33,17 @@ Lần tích hợp đã lấy 100 kỳ Mega liên tiếp #01487–#01586. Có 600
 
 `tests/fixtures/` lưu một số HTML thật phục vụ regression. `fixtures/manifest.json` ghi hash và nguồn cho các fixture đó. Cache của lần chạy thật lưu cả response gốc và HTML parser thực đọc; `raw_sha256` của từng Draw phải tìm được file `.bin` cùng hash. Trong database kiểm tra ban đầu đã tái dựng 99 fragment parser từ chính AJAX JSON đã lưu để khôi phục liên kết bằng chứng, không đổi bộ số lịch sử.
 
+## Nguồn dùng cho mô phỏng và kiểm chứng
+
+- Keno dùng bảng trùng số theo từng bậc tại Điều 6 của [thể lệ quay số](https://media.vietlott.vn/main/08.2019/cms/game/the-le-quay-so-keno.pdf). Bậc 8–10 có hạng trùng 0 số. Giới hạn trả thưởng theo kỳ nằm trong [cơ cấu giải công bố](https://vietlott.vn/vi/choi/keno/gioi-thieu-san-pham-keno).
+- Max 3D và Max 3D Pro dùng nhóm kết quả và điều kiện trúng trong [đối chiếu nguồn chính thức](redesign/max-bingo/source-evidence.md), gồm thứ tự giải đặc biệt, cặp giống nhau và các hạng chồng lấp của Pro.
+- Bingo18 dùng ba kết quả quay và điều kiện theo lựa chọn. [Kỳ #0182241](https://vietlott.vn/vi/trung-thuong/ket-qua-trung-thuong/view-detail-bingo18-result?id=0182241&nocatche=1) minh họa cách xác định số lần xuất hiện, cửa tổng và Lớn–Hòa–Nhỏ.
+
 ## Chưa xác minh
 
 - Toàn bộ thời gian hiệu lực của từng phiên bản luật, toàn bộ lịch sử của bảy sản phẩm và mọi biến thể/chơi bao.
 - Mốc công bố lịch sử và việc dữ liệu đã có sẵn trước mỗi kỳ trong quá khứ.
-- Cơ chế trả nhiều giải/chồng lấp/giới hạn chia giải ở Max, Pro, Keno phụ và Bingo18.
+- Số tiền thực trả khi Max/Pro lặp kết quả, giới hạn chia giải lịch sử của Keno và tiền thưởng lịch sử Bingo18. Các phép thử đếm sự kiện trúng theo mô hình.
 - Khả năng endpoint còn giữ cùng cấu trúc trong những lần chạy sau; parser lỗi phải dừng batch và giữ DB cũ.
 
 Không có lời xác nhận rằng đã khảo sát xong toàn bộ T01 hoặc đạt T10.

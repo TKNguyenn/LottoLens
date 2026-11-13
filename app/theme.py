@@ -126,6 +126,7 @@ def build_qss(tokens):
     QPushButton#themeToggle {{ background:{bg_sunken}; color:{fg_muted}; border-color:{border}; text-align:left; font-size:11px; min-height:30px; }}
     QPushButton#sidebarToggle {{ background:transparent; border:1px solid transparent; padding:0; min-height:30px; border-radius:8px; }}
     QPushButton#sidebarToggle:hover {{ background:{bg_sunken}; border-color:{border}; }}
+    QPushButton#dayNightToggle {{ background:transparent; border:1px solid transparent; padding:0; min-height:30px; }}
     QComboBox:focus, QLineEdit:focus, QSpinBox:focus, QTimeEdit:focus {{ border:1px solid {red}; }}
     QComboBox, QLineEdit, QSpinBox, QTimeEdit {{ background:{bg}; border:1px solid {border_strong};
       border-radius:8px; padding:0 10px; min-height:32px; selection-background-color:{red}; selection-color:{on_red}; }}
@@ -150,7 +151,8 @@ def build_qss(tokens):
     QPushButton[keyboardFocus="true"]:focus, QTextBrowser[keyboardFocus="true"]:focus,
     QPushButton#primary[keyboardFocus="true"]:focus, QPushButton#quiet[keyboardFocus="true"]:focus,
     QPushButton#segment[keyboardFocus="true"]:focus, QPushButton#themeToggle[keyboardFocus="true"]:focus,
-    QPushButton#sidebarToggle[keyboardFocus="true"]:focus {{ border:1px solid {red}; }}
+    QPushButton#sidebarToggle[keyboardFocus="true"]:focus,
+    QPushButton#dayNightToggle[keyboardFocus="true"]:focus {{ border:1px solid {red}; }}
     QListWidget#navigation {{ background:transparent; border:0; outline:0; }}
     QProgressBar {{ background:{bg_sunken}; border:0; border-radius:2px; height:4px; max-height:4px; }}
     QProgressBar::chunk {{ background:qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 {cta_top}, stop:1 {cta_end}); border-radius:2px; }}

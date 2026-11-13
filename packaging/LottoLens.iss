@@ -65,6 +65,8 @@ english.ChooseSubfolder=Choose a dedicated LottoLens folder, not a drive root or
 [Files]
 Source: "..\LICENSE"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\COPYRIGHT"; DestDir: "{app}"; Flags: ignoreversion
+Source: "THIRD_PARTY.md"; DestDir: "{app}\third-party"; Flags: ignoreversion
+Source: "..\build\third-party\*.txt"; DestDir: "{app}\third-party"; Flags: ignoreversion
 Source: "..\dist\LottoLens\LottoLens.exe"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\dist\LottoLens\_internal\*"; DestDir: "{app}\_internal"; Flags: ignoreversion recursesubdirs createallsubdirs
 
@@ -74,6 +76,7 @@ Name: "{autoprograms}\Gỡ LottoLens - Uninstall"; Filename: "{uninstallexe}"
 
 [Run]
 Filename: "{app}\LottoLens.exe"; Description: "{cm:Launch}"; Flags: postinstall nowait skipifsilent
+Filename: "{app}\LottoLens.exe"; Flags: nowait skipifnotsilent; Check: IsAppUpdate
 
 [UninstallDelete]
 Type: files; Name: "{autodesktop}\LottoLens.lnk"
@@ -85,6 +88,31 @@ var
 
 function GetTempFileNameW(PathName, PrefixString: String; Unique: Cardinal; Buffer: String): Cardinal;
   external 'GetTempFileNameW@kernel32.dll stdcall';
+
+function OpenProcess(Access: Cardinal; Inherit: Boolean; ProcessId: Cardinal): THandle;
+  external 'OpenProcess@kernel32.dll stdcall';
+function WaitForSingleObject(Handle: THandle; Milliseconds: Cardinal): Cardinal;
+  external 'WaitForSingleObject@kernel32.dll stdcall';
+function CloseHandle(Handle: THandle): Boolean;
+  external 'CloseHandle@kernel32.dll stdcall';
+
+function IsAppUpdate: Boolean;
+begin
+  Result := StrToIntDef(ExpandConstant('{param:UPDATEPID|0}'), 0) > 0;
+end;
+
+function InitializeSetup: Boolean;
+var
+  ProcessHandle: THandle;
+begin
+  Result := True;
+  if not IsAppUpdate then exit;
+  ProcessHandle := OpenProcess($100000, False, StrToIntDef(ExpandConstant('{param:UPDATEPID|0}'), 0));
+  if ProcessHandle <> 0 then begin
+    Result := WaitForSingleObject(ProcessHandle, 15000) = 0;
+    CloseHandle(ProcessHandle);
+  end;
+end;
 
 procedure CreateDesktopShortcut;
 begin

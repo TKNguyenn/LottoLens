@@ -1,4 +1,5 @@
 """Real disposable Windows install/keep/reinstall/purge test; no provider requests."""
+import argparse
 from contextlib import closing
 import hashlib
 import json
@@ -18,7 +19,10 @@ from check_analysis_core import history
 
 
 def main():
-    setup = ROOT/'dist'/f'LottoLens-Setup-{__version__}.exe'
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--setup', type=Path, default=ROOT/'dist'/f'LottoLens-Setup-{__version__}.exe')
+    args = parser.parse_args()
+    setup = args.setup.resolve(strict=True)
     base = ROOT/'build'; base.mkdir(exist_ok=True)
     work = Path(tempfile.mkdtemp(prefix='installer-smoke-', dir=base)).resolve()
     assert work.is_relative_to(base.resolve())
