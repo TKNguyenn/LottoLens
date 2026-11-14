@@ -1,4 +1,4 @@
-"""Opt-in Windows daily tasks scoped to this preferences profile."""
+"""Opt-in Windows history tasks scoped to this preferences profile."""
 import csv
 from datetime import datetime, timedelta, timezone
 import hashlib
@@ -11,21 +11,15 @@ import tempfile
 import xml.etree.ElementTree as ET
 
 from .rules import RULES
+from .draw_schedule import triggers
+from .preferences import default_preferences, validate_auto_updates
 
 VIETNAM = timezone(timedelta(hours=7))
 _NS = "http://schemas.microsoft.com/windows/2004/02/mit/task"
 
 
 def _settings(preferences):
-    values = preferences.get("auto_updates", {game: {"enabled": False, "time": "20:00"} for game in RULES})
-    if not isinstance(values, dict) or set(values) != set(RULES):
-        raise ValueError("Invalid automatic-update games.")
-    for value in values.values():
-        if (not isinstance(value, dict) or set(value) != {"enabled", "time"}
-                or type(value["enabled"]) is not bool or not isinstance(value["time"], str)
-                or re.fullmatch(r"(?:[01][0-9]|2[0-3]):[0-5][0-9]", value["time"]) is None):
-            raise ValueError("Automatic-update time must be HH:MM and enabled must be boolean.")
-    return values
+    return validate_auto_updates(preferences.get("auto_updates", default_preferences()["auto_updates"]))
 
 
 def _run(arguments):
@@ -60,12 +54,26 @@ def _task_xml(game, value, db_path, preferences_path, sid):
         return item
 
     info = child(root, "RegistrationInfo")
-    child(info, "Description", "LottoLens daily official-history update (Vietnam UTC+7).")
-    trigger = child(child(root, "Triggers"), "CalendarTrigger")
+    child(info, "Description", "LottoLens official-history update (Vietnam UTC+7).")
+    schedule = child(root, "Triggers")
     day = datetime.now(VIETNAM).date().isoformat()
-    child(trigger, "StartBoundary", day + "T" + value["time"] + ":00+07:00")
-    child(trigger, "Enabled", "true")
-    child(child(trigger, "ScheduleByDay"), "DaysInterval", "1")
+    for start, weekdays, interval, duration in triggers(game, value):
+        trigger = child(schedule, "CalendarTrigger")
+        if interval:
+            repeat = child(trigger, "Repetition")
+            child(repeat, "Interval", f"PT{interval}M")
+            child(repeat, "Duration", f"PT{duration}M")
+        child(trigger, "StartBoundary", day + "T" + start + ":00+07:00")
+        child(trigger, "Enabled", "true")
+        if weekdays:
+            weekly = child(trigger, "ScheduleByWeek")
+            child(weekly, "WeeksInterval", "1")
+            days = child(weekly, "DaysOfWeek")
+            day_names = ("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday")
+            for index in weekdays:
+                child(days, day_names[index])
+        else:
+            child(child(trigger, "ScheduleByDay"), "DaysInterval", "1")
     principal = child(child(root, "Principals"), "Principal", id="CurrentUser")
     child(principal, "UserId", sid)
     child(principal, "LogonType", "InteractiveToken")

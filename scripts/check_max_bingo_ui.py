@@ -25,17 +25,25 @@ def main():
                 w.game.setCurrentIndex(w.game.findData(game)); rule=w.rule
                 w.store.add_draws(rule,history(rule));w.refresh()
                 assert w.odds_table.rowCount()>0
-                contexts=BINGO_PLAYS if game=="bingo18" else (None,)
+                if game=="bingo18":
+                    w.change_play("any_triple")
+                    assert w.sample_ticket().selections=={"play":"any_triple","main":[]}
+                    assert w.ticket_controls[1]["play"].findData("any_triple")==-1
+                    assert w.odds_table.rowCount()>0
+                contexts=tuple(key for key in BINGO_PLAYS if key!="any_triple") if game=="bingo18" else (None,)
                 for context in contexts:
                     if context:
                         group=w.ticket_controls[0]["play"]
                         group.setCurrentIndex(group.findData(context));app.processEvents()
+                        # Probability and suggestion selectors are deliberately independent.
+                        w.change_suggestion_play(context)
                         assert w.ticket_controls[1]["play"].currentData()==context
                         assert w.count.maximum()==min(100,len(bingo_choices(context)))
                         assert w.sample_ticket().selections["play"]==context
                         choice=w.ticket_controls[0]["choice"]
                         choice.setCurrentIndex(choice.count()-1)
-                        assert w.ticket_controls[1]["choice"].currentData()==choice.currentData()
+                        assert w.ticket_controls[2]["choice"].currentData()==choice.currentData()
+                        assert w.ticket_controls[1]["choice"].isHidden()
                     for method in ("uniform_v1","frequency90_laplace1_v1","bayes90_v1"):
                         w.method.setCurrentIndex(w.method.findData(method));w.count.setValue(1);w.make_suggestions()
                         assert w.generated is not None, w.notice.text()
@@ -56,7 +64,7 @@ def main():
                     assert w.sample_ticket().selections=={"main":["999","007"]}
                     assert w.ticket_controls[1]["first"].text()=="999"
             w.game.setCurrentIndex(w.game.findData("bingo18"))
-            w.change_play("sum");w.count.setValue(2)
+            w.change_play("sum");w.change_suggestion_play("sum");w.count.setValue(2)
             w.method.setCurrentIndex(w.method.findData("ai_history90_v1"))
             w.key.setText("qa-temporary-secret")
             text=json.dumps({"tickets":[{"play":"sum","main":[10]},{"play":"sum","main":[11]}],"explanation":"offline fixture"})
@@ -94,7 +102,7 @@ def main():
                     validate_ticket(rule,Ticket(**record["ticket"]))
                     assert record["metadata"]["history_window"]==30
                     assert "qa-temporary-secret" not in json.dumps(record)
-            assert {row["ticket"]["selections"]["play"] for row in store.suggestions(get_rule("bingo18"))}==set(BINGO_PLAYS)
+            assert {row["ticket"]["selections"]["play"] for row in store.suggestions(get_rule("bingo18"))}==set(BINGO_PLAYS)-{"any_triple"}
         finally:store.close()
     print("Max/Bingo desktop OK: contexts/samples/limits/generation/save/language/themes/worker locks; offline")
 

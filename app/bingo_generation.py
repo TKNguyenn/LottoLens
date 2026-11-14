@@ -49,7 +49,10 @@ def build_result_request(config, rule, history, count, history_window):
                         "integer_only": True, "keep_order": True, "repeated_numbers_allowed": True},
         "output_example": {"results": [[6, 3, 4], [5, 1, 5]], "explanation": "Giải thích ngắn."},
     }
-    url, headers, body = ai.build_request(config, canonical(context), web_search=False)
+    query = canonical(context)
+    if len(query) > 10_000:
+        raise ValueError("Dữ liệu AI vượt 10.000 ký tự. Hãy giảm số kỳ phân tích; chưa gửi yêu cầu.")
+    url, headers, body = ai.build_request(config, query, web_search=False)
     body["instructions"] = (
         INSTRUCTIONS.replace("90 kỳ", f"{history_window} kỳ")
         .replace("count bộ khác nhau", "count bộ ba")

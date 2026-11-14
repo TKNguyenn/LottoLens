@@ -4,11 +4,25 @@ from pathlib import Path
 import re
 
 from .rules import RULES
+from .draw_schedule import CUSTOM_MODE, DRAW_MODE
+
+
+def validate_auto_updates(values):
+    if not isinstance(values, dict) or set(values) != set(RULES):
+        raise ValueError("Danh sách lịch tự cập nhật không hợp lệ.")
+    for value in values.values():
+        if (not isinstance(value, dict) or not {"enabled", "time"} <= set(value)
+                or set(value) - {"enabled", "time", "mode"}
+                or type(value["enabled"]) is not bool or not isinstance(value["time"], str)
+                or value.get("mode", CUSTOM_MODE) not in (DRAW_MODE, CUSTOM_MODE)
+                or re.fullmatch(r"(?:[01][0-9]|2[0-3]):[0-5][0-9]", value["time"]) is None):
+            raise ValueError("Lịch tự cập nhật cần công tắc bật/tắt và giờ HH:MM hợp lệ.")
+    return values
 
 
 def default_preferences():
     return {"language": "vi", "history_limits": {game: 100 for game in RULES}, "analysis_window": 90,
-            "auto_updates": {game: {"enabled": False, "time": "20:00"} for game in RULES},
+            "auto_updates": {game: {"enabled": False, "time": "20:00", "mode": DRAW_MODE} for game in RULES},
             "auto_app_updates": True}
 
 
@@ -24,14 +38,7 @@ def validate_preferences(body):
     window = body.get("analysis_window", 90)
     if type(window) is not int or not 1 <= window <= 2000:
         raise ValueError("Số kỳ phân tích phải là số nguyên từ 1 đến 2000.")
-    automatic = body.get("auto_updates", default_preferences()["auto_updates"])
-    if not isinstance(automatic, dict) or set(automatic) != set(RULES):
-        raise ValueError("Danh sách lịch tự cập nhật không hợp lệ.")
-    for value in automatic.values():
-        if (not isinstance(value, dict) or set(value) != {"enabled", "time"}
-                or type(value["enabled"]) is not bool or not isinstance(value["time"], str)
-                or re.fullmatch(r"(?:[01][0-9]|2[0-3]):[0-5][0-9]", value["time"]) is None):
-            raise ValueError("Lịch tự cập nhật cần công tắc bật/tắt và giờ HH:MM hợp lệ.")
+    automatic = validate_auto_updates(body.get("auto_updates", default_preferences()["auto_updates"]))
     app_updates = body.get("auto_app_updates", True)
     if type(app_updates) is not bool:
         raise ValueError("Cài đặt giao diện không hợp lệ.")

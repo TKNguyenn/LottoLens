@@ -21,9 +21,11 @@ from PySide6.QtWidgets import (
 
 from . import ai, __version__
 from .ai_generation import AI_METHOD, AI_LABEL, build_generation_request, generate_with_ai
+from .ai_methods import METHOD_LABELS as AI_METHOD_LABELS, OPTIMIZE, SIGNAL, SIGNAL_METHODS, optimize_prize, prize_targets, signal_window, test_signal
 from .backtest import run_backtest
 from .bingo_generation import build_result_request, generate_ai_results, generate_results
 from .domain import Ticket
+from .draw_schedule import CUSTOM_MODE, DRAW_MODE, PRESET_LABELS
 from .generation import METHOD_LABELS, generate, explain_ticket
 from .game_guide import show_game_guide
 from .model_catalog import fetch_models
@@ -547,6 +549,8 @@ class Desktop(QMainWindow):
         for method, text in METHOD_LABELS.items():
             self.method.addItem(text, method)
         self.method.addItem(AI_LABEL, AI_METHOD)
+        for method, text in AI_METHOD_LABELS.items():
+            self.method.addItem(text, method)
         self.method.setMinimumWidth(0); self.method.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToMinimumContentsLengthWithIcon)
         self.method.setMinimumContentsLength(10)
         self.count = StepperSpinBox(); self.count.setRange(1, 100); self.count.setValue(5)
@@ -555,6 +559,13 @@ class Desktop(QMainWindow):
         self.method_box = QWidget()
         method_layout = QVBoxLayout(self.method_box); method_layout.setContentsMargins(0, 0, 0, 0); method_layout.setSpacing(8)
         self.method_requirements = self.add_field(method_layout, "Phương pháp", self.method, "Bayes và tần suất cần ít nhất 90 kỳ. Đồng đều dùng được khi chưa có lịch sử.")
+        self.prize_target_box = QWidget()
+        prize_layout = QVBoxLayout(self.prize_target_box)
+        prize_layout.setContentsMargins(0, 0, 0, 0); prize_layout.setSpacing(8)
+        self.prize_target = ThemedComboBox()
+        self.add_field(prize_layout, "Hạng giải mục tiêu", self.prize_target)
+        self.actions.append(self.prize_target)
+        method_layout.addWidget(self.prize_target_box)
         body.addWidget(self.method_box)
         row, self.suggestion_fields = self.grid(1, 2)
         count_box = QVBoxLayout()
@@ -566,7 +577,7 @@ class Desktop(QMainWindow):
         self.suggestion_fields.addWidget(self.target_box, 0, 1); body.addWidget(row)
         self.method_note = label("", "subtle"); body.addWidget(self.method_note)
         self.method.currentIndexChanged.connect(self.update_method_note)
-        self.update_method_note()
+        self.prize_target_box.hide()
         body.addWidget(self.separator())
         actions = QHBoxLayout(); actions.setSpacing(8)
         self.suggest_button = self.icon_button("Tạo bộ số tham khảo", "spark", self.make_suggestions, True)
@@ -588,7 +599,7 @@ class Desktop(QMainWindow):
         self.saved_label = label("", "caption"); results.body.addWidget(self.saved_label)
         grid.addWidget(results, 0, 1); layout.addWidget(split)
         self.suggestion_details, lower_grid = self.grid(1, 0); lower_grid.setColumnMinimumWidth(1, 352)
-        detail = SectionCard("Giải thích bộ đầu tiên", "info")
+        detail = self.suggestion_explanation = SectionCard("Giải thích bộ đầu tiên", "info")
         self.explanation = LocalizedTextBrowser(); self.explanation.setMinimumHeight(220); detail.body.addWidget(self.explanation)
         self.explanation.textChanged.connect(self.refresh_generation_view)
         lower_grid.addWidget(detail, 0, 0)
@@ -885,9 +896,12 @@ class Desktop(QMainWindow):
         limits = SectionCard("Lịch sử & tự cập nhật", "history")
         limits.body.setAlignment(Qt.AlignmentFlag.AlignTop)
         limits.body.addWidget(label("Giữ tối đa số kỳ mới nhất đã chọn. Cập nhật lấy phần còn thiếu và xóa kỳ cũ ngoài phạm vi sau khi tải hợp lệ; snapshot bộ số/báo cáo được giữ.", "subtle"))
-        limits.body.addWidget(label("Lịch hằng ngày dùng giờ Việt Nam (UTC+7), chạy cả khi đóng app; máy cần bật và tài khoản Windows đang đăng nhập. Bật rồi Lưu cài đặt để đăng ký lịch.", "caption"))
+        limits.body.addWidget(label("Lịch dùng giờ Việt Nam (UTC+7), chạy cả khi đóng app. Máy cần bật và tài khoản Windows đang đăng nhập. Bật rồi Lưu cài đặt để đăng ký lịch.", "caption"))
+        limits.body.addWidget(label("Keno chờ 4 phút, Bingo18 chờ 8 phút sau giờ quay dự kiến; một lượt tải mỗi kỳ.", "caption"))
+        limits.body.addWidget(label("Sau HTTP 429, Keno/Bingo18 nghỉ tự cập nhật ít nhất 1 giờ, hoặc lâu hơn theo Retry-After của nguồn.", "caption"))
         self.draw_limit_inputs = {}
         self.auto_update_inputs = {}; self.auto_time_inputs = {}; self.auto_status_labels = {}
+        self.auto_schedule_inputs = {}
         for game_id, rule in RULES.items():
             row = QHBoxLayout(); row.setSpacing(12)
             name = label(rule.name, "sectionTitle"); row.addWidget(name, 1)
@@ -898,15 +912,32 @@ class Desktop(QMainWindow):
             schedule = QHBoxLayout(); schedule.setSpacing(8)
             toggle = ThemeToggle(); toggle.setText("Tự động"); toggle.setFixedWidth(120)
             toggle.setChecked(self.preferences["auto_updates"][game_id]["enabled"])
-            bind_text(toggle, "setAccessibleName", f"Tự cập nhật hằng ngày · {rule.name}")
+            bind_text(toggle, "setAccessibleName", f"Tự cập nhật · {rule.name}")
+            schedule_mode = ThemedComboBox()
+            schedule_mode.addItem("Theo lịch quay", DRAW_MODE)
+            schedule_mode.addItem("Giờ tùy chọn", CUSTOM_MODE)
+            schedule_mode.setCurrentIndex(schedule_mode.findData(self.preferences["auto_updates"][game_id].get("mode", CUSTOM_MODE)))
+            bind_text(schedule_mode, "setAccessibleName", "Chế độ tự cập nhật")
             clock = QTimeEdit(); clock.setDisplayFormat("HH:mm"); clock.setFixedWidth(88)
             clock.setButtonSymbols(QTimeEdit.ButtonSymbols.NoButtons)
             clock.setTime(QTime.fromString(self.preferences["auto_updates"][game_id]["time"], "HH:mm"))
-            clock.setEnabled(toggle.isChecked()); bind_text(clock, "setAccessibleName", f"Giờ cập nhật · {rule.name}")
-            toggle.toggled.connect(lambda enabled, target=clock: target.setEnabled(enabled and self.worker is None))
-            schedule.addWidget(toggle); schedule.addStretch(); caption = label("Giờ", "caption"); caption.setBuddy(clock)
-            schedule.addWidget(caption); schedule.addWidget(clock); limits.body.addLayout(schedule)
+            bind_text(clock, "setAccessibleName", f"Giờ cập nhật · {rule.name}")
+            preset = label(PRESET_LABELS[game_id], "caption")
+
+            def update_schedule(_value=None, switch=toggle, mode=schedule_mode, field=clock, description=preset):
+                enabled = switch.isChecked() and self.worker is None
+                custom = mode.currentData() == CUSTOM_MODE
+                mode.setEnabled(enabled)
+                field.setVisible(custom); field.setEnabled(enabled and custom)
+                description.setVisible(not custom)
+
+            toggle.toggled.connect(update_schedule)
+            schedule_mode.currentIndexChanged.connect(update_schedule)
+            update_schedule()
+            schedule.addWidget(toggle); schedule.addWidget(schedule_mode, 1); schedule.addWidget(clock)
+            limits.body.addLayout(schedule); limits.body.addWidget(preset)
             self.auto_update_inputs[game_id] = toggle; self.auto_time_inputs[game_id] = clock
+            self.auto_schedule_inputs[game_id] = schedule_mode
             status = label("Chưa có lần tự cập nhật nào.", "caption")
             limits.body.addWidget(status); self.auto_status_labels[game_id] = status
             if game_id != next(reversed(RULES)):
@@ -917,7 +948,7 @@ class Desktop(QMainWindow):
         logo = label(""); logo.setPixmap(self.windowIcon().pixmap(42, 42)); logo.setFixedSize(42, 42)
         brand.addWidget(logo); brand.addWidget(label(APP_NAME, "title"), 1); about.body.addLayout(brand)
         about.body.addWidget(label("Xem lịch sử Vietlott, thống kê dữ liệu đã lưu và tạo bộ số tham khảo.", "subtle"))
-        about.body.addWidget(label("Dữ liệu lưu tại máy. Lịch sử chỉ cập nhật khi bạn bấm nút hoặc bật lịch hằng ngày. AI chỉ gọi khi bạn bấm và có thể tính phí; thống kê quá khứ không dự báo kỳ tiếp theo.", "subtle"))
+        about.body.addWidget(label("Dữ liệu lưu tại máy. Lịch sử cập nhật khi bạn bấm nút hoặc bật lịch tự động. AI chỉ gọi khi bạn bấm và có thể tính phí; thống kê quá khứ không dự báo kỳ tiếp theo.", "subtle"))
         about.body.addWidget(self.separator())
         self.github_button = QPushButton("GitHub")
         self.github_button.setEnabled(bool(APP_GITHUB_URL))
@@ -944,7 +975,9 @@ class Desktop(QMainWindow):
 
     def save_interface_preferences(self):
         body = {"language": self.language_choice.currentData(), "history_limits": {game: spin.value() for game, spin in self.draw_limit_inputs.items()}, "analysis_window": self.analysis_window,
-                "auto_updates": {game: {"enabled": toggle.isChecked(), "time": self.auto_time_inputs[game].time().toString("HH:mm")} for game, toggle in self.auto_update_inputs.items()},
+                "auto_updates": {game: {"enabled": toggle.isChecked(), "time": self.auto_time_inputs[game].time().toString("HH:mm"),
+                                        **({"mode": DRAW_MODE} if self.auto_schedule_inputs[game].currentData() == DRAW_MODE else {})}
+                                 for game, toggle in self.auto_update_inputs.items()},
                 "auto_app_updates": self.app_update_input.isChecked()}
         undo = None
         if body["auto_updates"] != self.preferences["auto_updates"] or any(value["enabled"] for value in body["auto_updates"].values()):
@@ -1278,10 +1311,10 @@ class Desktop(QMainWindow):
         self.suggestion_placeholder.setText(
             "Bấm Tạo kết quả giả lập để xem các bộ ba." if draw_preview else "Chọn phương pháp và bấm Tạo để xem bộ số tham khảo."
         )
-        self.ai_history_callout.show()
-        self.ai_history_callout.text.setText(f"Chọn AI phân tích sẽ gửi {window} kỳ tới nhà cung cấp và có thể tính phí. Không tự retry khi lỗi.")
         for combo, method_window in ((self.method, window), (self.verify_method, self.backtest_history_window)):
             labels = {"bayes90_v1": f"Xác suất–thống kê {method_window} kỳ (Bayes)", "frequency90_laplace1_v1": f"Tần suất {method_window} kỳ", AI_METHOD: f"AI phân tích lịch sử ({method_window} kỳ)"}
+            if combo is self.method:
+                labels.update({method: f"{text} ({window} kỳ)" for method, text in AI_METHOD_LABELS.items()})
             for method, text in labels.items():
                 index = combo.findData(method)
                 combo.setItemData(index, text, Qt.ItemDataRole.UserRole + 2); combo.setItemText(index, tr(text))
@@ -1348,7 +1381,7 @@ class Desktop(QMainWindow):
         self.refresh_statistics()
         self.update_ticket_controls()
         self.refresh_odds()
-        self.update_auto_status(self.store.auto_update_runs())
+        self.update_auto_status(self.store.auto_update_runs(latest_only=True))
         self.refresh_overview()
 
     def refresh_statistics(self):
@@ -1398,6 +1431,9 @@ class Desktop(QMainWindow):
             self.generated = None
             fill(self.suggestion_table, []); self.explanation.clear()
             context = self.suggestion_play_context()
+            if method in AI_METHOD_LABELS:
+                self.make_ai_experiment(rule, method, context)
+                return
             if context == "draw":
                 self.make_bingo_results()
                 return
@@ -1430,17 +1466,90 @@ class Desktop(QMainWindow):
             self.explanation.set_ui_text("\n".join(lines))
             self.notice.setText(f"Đã tạo {len(tickets)} bộ tham khảo. Điền kỳ dự định chơi rồi bấm Lưu nếu muốn đối chiếu sau.")
         except ValueError as error:
-            hint = "" if self.method.currentData() == AI_METHOD else (" Hãy cập nhật lịch sử hoặc chọn ngẫu nhiên đồng đều." if self.rule.kind == "set" else " Hiện có thể xem lịch sử và thống kê.")
+            hint = "" if self.method.currentData() in (AI_METHOD, *AI_METHOD_LABELS) else (" Hãy cập nhật lịch sử hoặc chọn ngẫu nhiên đồng đều." if self.rule.kind == "set" else " Hiện có thể xem lịch sử và thống kê.")
             self.notice.set_parts(str(error), hint)
 
     def update_method_note(self):
         window = self.analysis_window
-        if self.suggestion_play_context() == "draw" and self.method.currentData() != AI_METHOD:
+        method = self.method.currentData()
+        context = self.suggestion_play_context()
+        self.prize_target_box.setVisible(method == OPTIMIZE)
+        self.suggestion_explanation.title.setText("Kết quả phân tích AI" if method in AI_METHOD_LABELS else "Giải thích bộ đầu tiên")
+        if method in AI_METHOD_LABELS:
+            self.ai_history_callout.text.setText(f"AI dùng tối đa {window} kỳ theo Cài đặt. Bấm tạo có thể tính phí; không tìm web.")
+            if method == OPTIMIZE:
+                targets = prize_targets(self.rule, context)
+                if targets != tuple(self.prize_target.itemData(i) for i in range(self.prize_target.count())):
+                    self.prize_target.clear()
+                    for tier in targets:
+                        self.prize_target.addItem(tier, tier)
+                self.method_note.set_parts(f"Số kỳ dùng để đề xuất: {min(window, len(self.draws))}.", " ",
+                                           "App chọn nhóm bộ theo hạng giải và so với hai nhóm đối chứng cùng số bộ.")
+            else:
+                if len(self.draws) >= 20:
+                    training, holdout = signal_window(len(self.draws), window)
+                    self.method_note.setText(f"AI xem {training} kỳ; app giữ {holdout} kỳ cuối để đối chiếu tại máy.")
+                else:
+                    self.method_note.setText("Cần ít nhất 20 kỳ. AI chọn một quy tắc từ phần lịch sử cũ. App đối chiếu trên các kỳ về sau.")
+            return
+        self.ai_history_callout.text.setText(f"Chọn AI phân tích sẽ gửi {window} kỳ tới nhà cung cấp và có thể tính phí. Không tự retry khi lỗi.")
+        if context == "draw" and method != AI_METHOD:
             self.method_note.setText(
                 f"Tần suất và Bayes dùng {window} kỳ, tính riêng từng vị trí trong bộ ba. Ngẫu nhiên đồng đều dùng mức nền 1/6. Số có thể lặp."
             )
             return
         self.method_note.setText(f"AI nhận {window} kỳ đã lưu, dùng model ở AI & cấu hình với mức suy luận High. Bấm tạo sẽ gửi dữ liệu tới nhà cung cấp và có thể tính phí; không dùng web search." if self.method.currentData() == AI_METHOD else f"Tính tại máy, không gọi AI. Phương pháp Bayes và tần suất cần ít nhất {window} kỳ.")
+
+    def make_ai_experiment(self, rule, method, context):
+        config, history = self.current_config(), list(self.draws)
+        count, window = self.count.value(), self.analysis_window
+        target = self.prize_target.currentData()
+        preview = context == "draw"
+        snapshot = self.store.snapshot(rule, history) if not preview else None
+
+        def task(cancel, progress, _delta):
+            if method == OPTIMIZE:
+                return optimize_prize(config, rule, history, count, window, context, target, cancel, progress)
+            return test_signal(config, rule, history, count, window, context, cancel, progress)
+
+        def complete(result):
+            tickets = result.pop("tickets")
+            if not preview:
+                self.generated = (rule, method, tickets, snapshot, {**result, "requested_model": config.model, "play_context": context})
+            fill(self.suggestion_table, [[i, number_text({"main": row} if preview else row.selections)]
+                                        for i, row in enumerate(tickets, 1)])
+            lines = [AI_METHOD_LABELS[method], result["target"],
+                     "Tỷ lệ mỗi kỳ: ít nhất một bộ đạt mục tiêu.",
+                     f"Dữ liệu gửi AI: {result['history_used']} kỳ, đến #{result['cutoff']}."]
+            if method == OPTIMIZE:
+                if result["exact"]:
+                    lines.append("Xác suất của nhóm tính theo mô hình luật chơi.")
+                else:
+                    lines.append(f"Ước lượng trên {result['trials']} kỳ mô phỏng riêng.")
+            else:
+                lines.extend([SIGNAL_METHODS[result["signal_method"]], f"Cửa sổ của quy tắc: {result['lookback']} kỳ.",
+                              f"Đối chiếu {result['holdout']} kỳ đã lưu. Mốc ngẫu nhiên lấy trung bình 10 nhóm mỗi kỳ."])
+            names = {"ai": "Nhóm theo AI", "uniform": "Một nhóm ngẫu nhiên" if method == OPTIMIZE else "Chọn ngẫu nhiên",
+                     "local": "Tối ưu tại máy", "bayes": "Bayes"}
+            rates = result["rates"]
+            precision = 6 if method == OPTIMIZE and result["exact"] else 2
+            for name, rate in rates.items():
+                lines.extend([names[name], f"{rate:.{precision}%}"])
+            difference = (rates["ai"] - rates["local"]) * 100
+            lines.append(f"So với tối ưu tại máy: {difference:+.{precision}f} điểm phần trăm.")
+            if method == SIGNAL:
+                if rates["ai"] <= max(rates[name] for name in ("uniform", "bayes", "local")):
+                    lines.append("Quy tắc AI không vượt cả ba mốc đối chứng trong mẫu kiểm tra.")
+                lines.append("Kết quả chỉ mô tả mẫu kiểm tra. Model có thể đã biết kết quả công khai.")
+            else:
+                lines.append("Chênh lệch mô phỏng có thể do sai số lấy mẫu. Tỷ lệ quan sát 0% vẫn có thể xảy ra với giải hiếm." if not result["exact"]
+                             else "Đối chiếu dùng cùng số bộ và luật đang chọn.")
+                if preview:
+                    lines.append("Mọi nhóm có cùng số bộ ba khác nhau đều có cùng xác suất khớp đúng kết quả.")
+            self.explanation.set_ui_text("\n\n".join(lines))
+            self.notice.setText("Đã hoàn tất phân tích AI.")
+
+        self.start_task(task, complete, "Đang phân tích AI và tính đối chứng…")
 
     def make_bingo_results(self):
         rule, history = self.rule, list(self.draws)
@@ -1530,7 +1639,7 @@ class Desktop(QMainWindow):
                                     self.window_size, self.stats_segments, self.verify_method,
                                     self.history_search, self.history_filter]:
             widget.setEnabled(False)
-        for widget in [self.language_choice, self.analysis_window_input, self.app_update_input, *self.draw_limit_inputs.values(), *self.auto_update_inputs.values(), *self.auto_time_inputs.values()]:
+        for widget in [self.language_choice, self.analysis_window_input, self.app_update_input, *self.draw_limit_inputs.values(), *self.auto_update_inputs.values(), *self.auto_time_inputs.values(), *self.auto_schedule_inputs.values()]:
             widget.setEnabled(False)
         self.progress.setRange(0, 0); self.progress.show(); self.cancel_button.show()
         self.status_text.setText("●  Đang xử lý")
@@ -1561,7 +1670,9 @@ class Desktop(QMainWindow):
         for widget in [self.language_choice, self.analysis_window_input, self.app_update_input, *self.draw_limit_inputs.values(), *self.auto_update_inputs.values()]:
             widget.setEnabled(True)
         for game, clock in self.auto_time_inputs.items():
-            clock.setEnabled(self.auto_update_inputs[game].isChecked())
+            enabled = self.auto_update_inputs[game].isChecked()
+            self.auto_schedule_inputs[game].setEnabled(enabled)
+            clock.setEnabled(enabled and self.auto_schedule_inputs[game].currentData() == CUSTOM_MODE)
         self.progress.hide(); self.cancel_button.hide()
         self.status_text.setText("●  Sẵn sàng")
         self.refresh_generation_view()
@@ -1600,15 +1711,24 @@ class Desktop(QMainWindow):
             prefix = f"{row['day']}: tự cập nhật {state}."
             if row["status"] == "failed":
                 detail = "Bản ghi cũ chưa có chi tiết lỗi." if row["message"].startswith("Scheduled update failed (") else row["message"]
-                status.set_parts(prefix, " ", detail, " ", "Không tự thử lại trong ngày; bấm Cập nhật lịch sử để thử thủ công.")
+                status.set_parts(prefix, " ", detail, " ", self.schedule_failure_hint(row))
+            elif row["status"] == "waiting":
+                status.set_parts(row["day"], " · ", row["message"])
             else:
                 status.setText(prefix)
+
+    def schedule_failure_hint(self, row):
+        if row["game_id"] in ("keno", "bingo18") and len(row["day"]) > 10 and "HTTP 429" in row["message"]:
+            return "Sau HTTP 429, Keno/Bingo18 nghỉ tự cập nhật ít nhất 1 giờ, hoặc lâu hơn theo Retry-After của nguồn."
+        if len(row["day"]) > 10:
+            return "App sẽ kiểm tra ở lượt đã lên lịch tiếp theo. Có thể bấm Cập nhật lịch sử để thử thủ công."
+        return "Không tự thử lại trong ngày; bấm Cập nhật lịch sử để thử thủ công."
 
     def poll_background_updates(self):
         if self.worker or self.closing:
             return
         try:
-            runs = self.store.auto_update_runs()
+            runs = self.store.auto_update_runs(latest_only=True)
             self.update_auto_status(runs)
             current = {(row["game_id"], row["day"]): (row["status"], row["message"]) for row in runs}
             changed = [row for row in runs if self._auto_results.get((row["game_id"], row["day"])) != (row["status"], row["message"])]
@@ -1621,13 +1741,13 @@ class Desktop(QMainWindow):
                 self.notice.setText("Lịch sử đã được cập nhật bên ngoài; bộ số và báo cáo đang xem giữ nguyên.")
             today = datetime.now(timezone(timedelta(hours=7))).date().isoformat()
             for row in changed:
-                if row["day"] == today and row["game_id"] == self.rule.game_id and row["status"] in ("success", "failed"):
+                if row["day"][:10] == today and row["game_id"] == self.rule.game_id and row["status"] in ("success", "failed"):
                     name = get_rule(row["game_id"]).name
                     if row["status"] == "success":
                         self.notice.setText(f"Tự cập nhật {name}: hoàn tất. Bộ số và báo cáo đang xem giữ nguyên.")
                     else:
                         detail = "Bản ghi cũ chưa có chi tiết lỗi." if row["message"].startswith("Scheduled update failed (") else row["message"]
-                        self.notice.set_parts(f"Tự cập nhật {name}: thất bại. ", detail, " ", "Không tự thử lại trong ngày; bấm Cập nhật lịch sử để thử thủ công.")
+                        self.notice.set_parts(f"Tự cập nhật {name}: thất bại. ", detail, " ", self.schedule_failure_hint(row))
                     break
         except (ValueError, OSError, sqlite3.Error) as error:
             self.notice.setText(f"Chưa đọc được kết quả tự cập nhật: {error}")

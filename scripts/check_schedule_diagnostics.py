@@ -20,7 +20,8 @@ def main():
         assert scheduled_sync._failure_message(ValueError(message))==message
     with tempfile.TemporaryDirectory() as directory:
         folder=Path(directory);db=folder/"history.db";path=folder/"ui_preferences.json"
-        prefs=default_preferences();prefs["auto_updates"]["max3d"]["enabled"]=True
+        prefs=default_preferences()
+        prefs["auto_updates"]["max3d"]={"enabled":True,"time":"20:00"}
         save_preferences(path,prefs)
         today=datetime.now(VIETNAM)
         with patch.object(scheduled_sync,"OfficialSource") as source:
@@ -31,7 +32,7 @@ def main():
                 assert "HTTP 503" in row["message"],row
             assert scheduled_sync.run_scheduled("max3d",db,path,today)==0
             source.return_value.fetch_history.assert_called_once()
-            prefs["auto_updates"]["bingo18"]["enabled"]=True;save_preferences(path,prefs)
+            prefs["auto_updates"]["bingo18"]={"enabled":True,"time":"20:00"};save_preferences(path,prefs)
             source.return_value.fetch_history.side_effect=ValueError("secret-api-key https://user:password@example.test/?token=private")
             assert scheduled_sync.run_scheduled("bingo18",db,path,today)==1
             with _store(db) as store:

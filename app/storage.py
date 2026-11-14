@@ -1,6 +1,6 @@
 from dataclasses import asdict
 from contextlib import closing
-from datetime import date
+from datetime import date, datetime
 from pathlib import Path
 import json
 import os
@@ -175,8 +175,12 @@ class Store:
     @staticmethod
     def _auto_identity(game_id, day):
         get_rule(game_id)
-        if not isinstance(day, str) or date.fromisoformat(day).isoformat() != day:
-            raise ValueError("Ngày chạy tự động phải có dạng YYYY-MM-DD.")
+        if isinstance(day, str):
+            if len(day) == 10 and date.fromisoformat(day).isoformat() == day:
+                return
+            if len(day) == 16 and datetime.fromisoformat(day).isoformat(" ", timespec="minutes") == day:
+                return
+        raise ValueError("Ngày hoặc giờ chạy tự động không hợp lệ.")
 
     def claim_auto_update(self, game_id, day):
         self._auto_identity(game_id, day)
@@ -192,8 +196,11 @@ class Store:
             self.db.execute("UPDATE auto_update_runs SET status=?,message=? WHERE game_id=? AND day=?",
                             (status, message, game_id, day))
 
-    def auto_update_runs(self):
-        return [dict(row) for row in self.db.execute("SELECT game_id,day,status,message FROM auto_update_runs ORDER BY day DESC,game_id")]
+    def auto_update_runs(self, *, latest_only=False):
+        query = "SELECT game_id,day,status,message FROM auto_update_runs"
+        if latest_only:
+            query += " WHERE (game_id, day) IN (SELECT game_id, MAX(day) FROM auto_update_runs GROUP BY game_id)"
+        return [dict(row) for row in self.db.execute(query + " ORDER BY day DESC,game_id")]
 
     def list_draws(self, rule):
         rows = self.db.execute("""

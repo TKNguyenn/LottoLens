@@ -1,6 +1,6 @@
-# LottoLens V0.8.0 — Windows installer
+# LottoLens V1.0.0 — Windows installer
 
-Build output: `dist/LottoLens-Setup-0.8.0.exe`, Windows 10/11 x64. End users do not need Python. The installer supports Vietnamese/English, lets users select a writable destination, and offers launch/desktop-shortcut checkboxes on the completion page. A Start Menu app and uninstall entry are installed, plus the standard Windows Installed Apps entry.
+Build output: `dist/LottoLens-Setup-1.0.0.exe`, Windows 10/11 x64. End users do not need Python. The installer supports Vietnamese/English, lets users select a writable destination, and offers launch/desktop-shortcut checkboxes on the completion page. A Start Menu app and uninstall entry are installed, plus the standard Windows Installed Apps entry.
 
 ## Layout and data
 

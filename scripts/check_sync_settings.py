@@ -36,7 +36,14 @@ def main():
                 assert all(not clock.isEnabled() for clock in window.auto_time_inputs.values())
                 assert all(clock.time().toString("HH:mm") == "20:00" for clock in window.auto_time_inputs.values())
                 fetch.assert_not_called()
+                assert window.auto_schedule_inputs["mega"].currentData() == "draw"
                 window.auto_update_inputs["mega"].click()
+                assert not window.auto_time_inputs["mega"].isEnabled()
+                with patch("app.ui.configure_schedules", return_value=Mock()) as configure:
+                    window.preferences_save_button.click()
+                    assert configure.call_args.args[0]["auto_updates"]["mega"]["mode"] == "draw"
+                mode = window.auto_schedule_inputs["mega"]
+                mode.setCurrentIndex(mode.findData("custom"))
                 window.auto_time_inputs["mega"].setTime(QTime(21, 15))
                 assert window.auto_time_inputs["mega"].isEnabled()
                 with patch("app.ui.configure_schedules", return_value=Mock()) as configure:

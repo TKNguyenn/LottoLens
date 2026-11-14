@@ -3,12 +3,12 @@
 <p align="center">Vietlott history, probability and statistics — in a desktop app.</p>
 <p align="center"><a href="README.md">Tiếng Việt</a> · <strong>English</strong></p>
 <p align="center">
-  <img src="https://img.shields.io/badge/version-0.8.0-C81E33" alt="Version 0.8.0">
+  <img src="https://img.shields.io/badge/version-1.0.0-C81E33" alt="Version 1.0.0">
   <img src="https://img.shields.io/badge/platform-Windows_10%2F11-0078D4" alt="Windows 10 and 11">
   <img src="https://img.shields.io/badge/Python-3.11-3776AB" alt="Python 3.11">
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-GPLv3-blue" alt="GPLv3 license"></a>
 </p>
-<p align="center"><strong><a href="https://github.com/TKNguyenn/LottoLens/releases/download/v0.8.0/LottoLens-Setup-0.8.0.exe">Download Windows setup V0.8.0</a></strong> · <a href="https://github.com/TKNguyenn/LottoLens/releases/tag/v0.8.0">Release notes</a></p>
+<p align="center"><strong><a href="https://github.com/TKNguyenn/LottoLens/releases/download/v1.0.0/LottoLens-Setup-1.0.0.exe">Download Windows setup V1.0.0</a></strong> · <a href="https://github.com/TKNguyenn/LottoLens/releases/tag/v1.0.0">Release notes</a></p>
 
 ![LottoLens overview in dark mode](docs/images/en-overview-dark.png)
 
@@ -18,13 +18,17 @@
 
 *Screenshots show the actual app with synthetic data, not official draw results. Open an image to view it at full size.*
 
+## Version 1.0.0
+
+Adds two AI methods across all seven games, draw-based automatic history updates and HTTP 429 handling that respects the source's wait deadline. See the [bilingual release notes](docs/releases/v1.0.0.md). After upgrading, click **Save settings** to register the automatic schedules again.
+
 ## Features
 
 - **History with sources:** fetch Vietlott results, search by draw or number and open the original source. Updates are incremental when a verified history boundary exists.
 - **Statistics and probabilities:** frequencies, heatmaps and theoretical odds, with a configurable recent-draw analysis window.
 - **Number suggestions:** uniform, frequency, Bayesian and AI methods. Save suggestions with their method and history snapshot.
 - **Simulation and validation:** simulate tickets and compare methods with random selection across all seven games. Reports show winning tickets, rates and prize tiers.
-- **Per-game daily updates:** Vietnam-time schedules using Windows Task Scheduler, even while the app is closed.
+- **Per-game history updates:** follow the draw schedule or a custom time through Windows Task Scheduler, even while the app is closed.
 - **Vietnamese and English:** immediate language switching, light/dark gradients, a collapsible sidebar, illustrated onboarding and game guides.
 - **Optional AI:** HTTPS OpenAI-compatible endpoints, model fetching, manual model entry and streaming.
 - **App updates:** check GitHub from the sidebar, with an automatic-check setting and confirmation before the installer downloads.
@@ -40,7 +44,7 @@
 
 ### Windows installer
 
-Download [LottoLens-Setup-0.8.0.exe](https://github.com/TKNguyenn/LottoLens/releases/download/v0.8.0/LottoLens-Setup-0.8.0.exe) for **Windows 10/11 x64**. To upgrade an existing copy, close LottoLens and select its current installation folder to keep using the existing `data` folder.
+Download [LottoLens-Setup-1.0.0.exe](https://github.com/TKNguyenn/LottoLens/releases/download/v1.0.0/LottoLens-Setup-1.0.0.exe) for **Windows 10/11 x64**. To upgrade an existing copy, close LottoLens and select its current installation folder to keep using the existing `data` folder.
 
 The installer lets you choose where to store the app and its data. The final page offers desktop-shortcut and launch checkboxes. Uninstall can **keep user data** or **remove all user data**. Both options remove this installation's scheduled tasks. The installer is unsigned, so Windows may show an unknown-publisher warning.
 
@@ -92,6 +96,8 @@ Triple generation supports uniform, frequency, Bayesian and AI methods. Frequenc
 
 The validation report shows how many tickets won and compares the win rate with random selection. The simulation report shows the ticket, the number of draws with a prize, and the frequency of each prize tier in the run. Choose **Show JSON data** for the technical output.
 
+**Number suggestions** includes two additional AI methods across all seven games. **AI prize-tier optimization** selects a group for your chosen tier and compares its chance of at least one match with local optimization and one random group of the same size. The report identifies simulated estimates. **AI signal discovery and validation** requires at least 20 draws. The model chooses a frequency or Bayesian rule using earlier history. The app reserves the latest draws for local testing and compares the rule with random selection, Bayesian weights, and local optimization. Both methods follow the configured **Recent draws used for analysis**, up to the history available after reserving any test draws. Inputs over 10,000 characters are rejected before a request is sent. The model is called when you click Generate and may incur provider charges. For Bingo18 **Simulated results (3 numbers)**, the target is an exact ordered match.
+
 ### 4. Configure history, analysis and daily updates
 
 | Setting | Default | Purpose |
@@ -99,7 +105,11 @@ The validation report shows how many tickets won and compares the win rate with 
 | Retained draws, per game | 100 | History range to keep after a valid update |
 | Recent draws used for analysis | 90 | Input for overview, frequency/Bayesian/AI methods and validation warm-up |
 
-In **Settings**, enable **Automatic**, choose each game's time and click **Save settings**. Schedules use **UTC+7** and run while the computer is on and the Windows account is signed in, even if the app is closed. All schedules are off by default. Missed times are not caught up; a failed game is not retried automatically that day. Use **Update history** for a manual attempt. Keno updates share results across all ten pick modes.
+In **Settings**, enable **Automatic** for each game, choose **Follow draw schedule** or **Custom time**, then click **Save settings**. Schedules use **UTC+7** and can run while the app is closed if the computer is on and the Windows user is signed in. All switches are off by default.
+
+**Follow draw schedule** checks Mega, Power, Max 3D and Max 3D Pro at 18:45 on their draw days. Lotto 5/35 is checked daily at 13:15 and 21:15. Keno waits four minutes after each scheduled draw, checking every eight minutes from 06:12 to 21:56. Bingo18 waits eight minutes, checking every six minutes from 06:13 to 22:01. Both use the default official result URL, fetch once per scheduled slot, and space requests within a fetch at least two seconds apart. HTTP 429 stops the fetch immediately; both schedules sharing the database pause for at least one hour, or longer according to the source's `Retry-After`. The deadline is saved in the error details, preserving existing history. These buffers reflect a small number of observations and do not guarantee publication times. **Custom time** runs once daily at the configured time, including existing schedules.
+
+Each slot makes one attempt. If the draw is still missing from the source, the app reports that it is waiting and checks again at the next scheduled slot. You can also click **Update history** manually. Keno updates share results across all ten pick modes.
 
 ![Language, analysis window and automatic-update settings](docs/images/en-settings-light.png)
 

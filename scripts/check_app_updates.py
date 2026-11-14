@@ -133,9 +133,11 @@ def check_ui(directory, release):
 
 def main():
     setup = b"test installer"
-    name = "LottoLens-Setup-0.10.0.exe"
-    url = f"{RELEASE_PAGE}/download/v0.10.0/{name}"
-    body = {"tag_name": "v0.10.0", "draft": False, "prerelease": False, "assets": [{
+    major, minor, patch_version = map(int, __version__.split("."))
+    newer = f"{major}.{minor}.{patch_version + 1}"
+    name = f"LottoLens-Setup-{newer}.exe"
+    url = f"{RELEASE_PAGE}/download/v{newer}/{name}"
+    body = {"tag_name": "v" + newer, "draft": False, "prerelease": False, "assets": [{
         "name": name, "browser_download_url": url, "state": "uploaded",
         "size": len(setup), "digest": "sha256:" + sha256(setup).hexdigest(),
     }]}
@@ -145,7 +147,7 @@ def main():
         request.side_effect = HTTPError(RELEASE_API, 404, "Not Found", {}, None)
         assert check_release()["status"] == "unpublished"
         request.side_effect = None
-        for tag, status in (("V" + __version__, "current"), ("0.2.0", "current"), ("v0.10.0", "available")):
+        for tag, status in (("V" + __version__, "current"), ("0.2.0", "current"), ("v" + newer, "available")):
             request.return_value = BytesIO(json.dumps({**body, "tag_name": tag}).encode())
             result = check_release()
             assert result["status"] == status

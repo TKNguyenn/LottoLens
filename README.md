@@ -3,12 +3,12 @@
 <p align="center">Lịch sử Vietlott, xác suất và thống kê — trong một ứng dụng desktop.</p>
 <p align="center"><strong>Tiếng Việt</strong> · <a href="README.en.md">English</a></p>
 <p align="center">
-  <img src="https://img.shields.io/badge/version-0.8.0-C81E33" alt="Phiên bản 0.8.0">
+  <img src="https://img.shields.io/badge/version-1.0.0-C81E33" alt="Phiên bản 1.0.0">
   <img src="https://img.shields.io/badge/platform-Windows_10%2F11-0078D4" alt="Windows 10 và 11">
   <img src="https://img.shields.io/badge/Python-3.11-3776AB" alt="Python 3.11">
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-GPLv3-blue" alt="Giấy phép GPLv3"></a>
 </p>
-<p align="center"><strong><a href="https://github.com/TKNguyenn/LottoLens/releases/download/v0.8.0/LottoLens-Setup-0.8.0.exe">Tải bộ cài Windows V0.8.0</a></strong> · <a href="https://github.com/TKNguyenn/LottoLens/releases/tag/v0.8.0">Ghi chú phát hành</a></p>
+<p align="center"><strong><a href="https://github.com/TKNguyenn/LottoLens/releases/download/v1.0.0/LottoLens-Setup-1.0.0.exe">Tải bộ cài Windows V1.0.0</a></strong> · <a href="https://github.com/TKNguyenn/LottoLens/releases/tag/v1.0.0">Ghi chú phát hành</a></p>
 
 ![Tổng quan LottoLens với giao diện tối](docs/images/vi-overview-dark.png)
 
@@ -18,13 +18,17 @@
 
 *Ảnh được chụp từ app thật với dữ liệu mẫu, không phải kết quả quay chính thức. Mở ảnh để xem kích thước đầy đủ.*
 
+## Bản phát hành v1.0.0
+
+Bổ sung hai phương pháp AI cho cả bảy trò, lịch tự cập nhật theo giờ quay và xử lý HTTP 429 có thời gian nghỉ theo nguồn. Xem [ghi chú phát hành Việt–Anh](docs/releases/v1.0.0.md). Sau khi nâng cấp, bấm **Lưu cài đặt** để đăng ký lại lịch tự cập nhật.
+
 ## Điểm nổi bật
 
 - **Lịch sử có nguồn:** tải kết quả từ Vietlott, tìm theo kỳ/số và mở nguồn để đối chiếu. Đồng bộ tăng dần khi có mốc lịch sử đã xác minh.
 - **Thống kê và xác suất:** tần suất, heatmap và xác suất theo mô hình luật; chọn số kỳ gần nhất dùng để phân tích.
 - **Bộ số tham khảo:** đồng đều, tần suất, Bayes hoặc AI. Lưu bộ số cùng phương pháp và snapshot lịch sử đã dùng.
 - **Mô phỏng và kiểm chứng:** mô phỏng vé và so phương pháp với lựa chọn ngẫu nhiên trên cả bảy trò. Báo cáo hiển thị số vé trúng, tỷ lệ và từng hạng giải.
-- **Tự cập nhật từng trò:** chọn giờ theo Việt Nam, chạy qua Windows Task Scheduler ngay cả khi đóng app.
+- **Tự cập nhật từng trò:** theo lịch quay hoặc giờ tự đặt, chạy qua Windows Task Scheduler ngay cả khi đóng app.
 - **Giao diện Việt/Anh:** đổi ngôn ngữ trực tiếp, theme sáng/tối có gradient, sidebar thu gọn, hướng dẫn bằng ảnh và luật từng trò.
 - **AI tùy chọn:** endpoint HTTPS OpenAI-compatible, tải danh sách model, nhập model thủ công và streaming.
 - **Cập nhật ứng dụng:** kiểm tra GitHub từ sidebar, có công tắc tự kiểm tra và xác nhận trước khi tải bộ cài.
@@ -40,7 +44,7 @@
 
 ### Bộ cài Windows
 
-Tải [LottoLens-Setup-0.8.0.exe](https://github.com/TKNguyenn/LottoLens/releases/download/v0.8.0/LottoLens-Setup-0.8.0.exe) cho **Windows 10/11 x64**. Nếu đã cài LottoLens, hãy đóng app và chọn lại thư mục cài hiện tại để tiếp tục dùng dữ liệu trong thư mục `data`.
+Tải [LottoLens-Setup-1.0.0.exe](https://github.com/TKNguyenn/LottoLens/releases/download/v1.0.0/LottoLens-Setup-1.0.0.exe) cho **Windows 10/11 x64**. Nếu đã cài LottoLens, hãy đóng app và chọn lại thư mục cài hiện tại để tiếp tục dùng dữ liệu trong thư mục `data`.
 
 Bộ cài cho chọn thư mục lưu app và dữ liệu. Trang cuối có ô tạo shortcut Desktop và mở app. Khi gỡ, chọn **giữ dữ liệu** hoặc **xóa toàn bộ dữ liệu**. Cả hai dọn lịch tự cập nhật của bản cài đó. Setup chưa ký số, Windows có thể báo nhà phát hành không xác định.
 
@@ -92,6 +96,8 @@ Kiểu bộ ba hỗ trợ đồng đều, tần suất, Bayes và AI. Tần su�
 
 Báo cáo kiểm chứng cho biết số vé trúng và so tỷ lệ với chọn ngẫu nhiên. Báo cáo mô phỏng cho biết vé đã thử, số kỳ trúng và tần suất từng hạng giải trong lần chạy. Chọn **Xem dữ liệu JSON** để xem dữ liệu kỹ thuật.
 
+Trang **Bộ số tham khảo** có thêm hai phương pháp AI cho cả bảy trò. **AI tối ưu hạng giải** chọn nhóm bộ theo hạng bạn quan tâm, rồi so tỷ lệ có ít nhất một bộ đạt mục tiêu với nhóm tối ưu tại máy và một nhóm ngẫu nhiên cùng số bộ. Báo cáo ghi rõ khi dùng mô phỏng. **AI tìm và kiểm chứng tín hiệu** cần ít nhất 20 kỳ. Model chọn một quy tắc tần suất hoặc Bayes từ đoạn lịch sử cũ. App giữ các kỳ cuối để thử quy tắc tại máy và so với ngẫu nhiên, Bayes và tối ưu tại máy. Cả hai lấy số kỳ đầu vào từ **Số kỳ gần nhất để phân tích**, trong phạm vi lịch sử có sẵn sau khi dành các kỳ kiểm chứng. Yêu cầu quá 10.000 ký tự báo lỗi trước khi gọi. App chỉ gửi khi bấm tạo và có thể tính phí. Với **Kết quả giả lập (3 số)** của Bingo18, mục tiêu là khớp đúng ba số theo thứ tự.
+
 ### 4. Cài đặt số kỳ và lịch tự cập nhật
 
 | Cài đặt | Mặc định | Tác dụng |
@@ -99,7 +105,11 @@ Báo cáo kiểm chứng cho biết số vé trúng và so tỷ lệ với chọ
 | Số kỳ giữ lại, riêng từng trò | 100 | Phạm vi lịch sử lưu sau cập nhật hợp lệ |
 | Số kỳ gần nhất để phân tích | 90 | Đầu vào tổng quan, tần suất, Bayes, AI và warm-up kiểm chứng |
 
-Trong **Cài đặt**, bật **Tự động**, chọn giờ từng trò rồi bấm **Lưu cài đặt**. Lịch theo **UTC+7**, chạy khi máy bật và tài khoản Windows đang đăng nhập, dù app đã đóng. Mặc định tất cả tắt. Không chạy bù khi lỡ giờ và không tự thử lại cùng trò trong ngày sau thất bại; dùng **Cập nhật lịch sử** để thử thủ công. Lịch Keno cập nhật chung kết quả cho cả 10 kiểu chọn số.
+Trong **Cài đặt**, bật **Tự động** cho từng trò, chọn **Theo lịch quay** hoặc **Giờ tùy chọn**, rồi bấm **Lưu cài đặt**. Lịch theo **UTC+7** và chạy khi máy bật, tài khoản Windows đang đăng nhập, dù app đã đóng. Các công tắc mặc định tắt.
+
+**Theo lịch quay** dùng 18:45 vào ngày quay của Mega, Power, Max 3D và Max 3D Pro, 13:15 và 21:15 hằng ngày cho Lotto 5/35. Keno chờ 4 phút sau giờ quay dự kiến, kiểm tra mỗi 8 phút từ 06:12 đến 21:56. Bingo18 chờ 8 phút, kiểm tra mỗi 6 phút từ 06:13 đến 22:01. Hai trò dùng URL kết quả chính thức mặc định, một lượt tải mỗi mốc và giãn các request trong lượt ít nhất 2 giây. Nếu gặp HTTP 429, dừng ngay lượt tải; cả hai lịch cùng DB nghỉ ít nhất 1 giờ, hoặc lâu hơn theo `Retry-After` của nguồn. Thời điểm chờ được lưu trong chi tiết lỗi và không làm mất lịch sử cũ. Khoảng chờ dựa trên một số quan sát, không bảo đảm nguồn luôn có kết quả đúng giờ. **Giờ tùy chọn** chạy một lần mỗi ngày ở giờ đã đặt. Lịch cũ chuyển vào chế độ giờ tùy chọn.
+
+Mỗi khung giờ thử một lần. Nếu nguồn chưa hiện kết quả, app ghi trạng thái chờ và sẽ kiểm tra ở lượt đã lên lịch tiếp theo. Bạn cũng có thể bấm **Cập nhật lịch sử**. Lịch Keno cập nhật chung kết quả cho cả 10 kiểu chọn số.
 
 ![Cài đặt ngôn ngữ, cửa sổ phân tích và lịch tự cập nhật](docs/images/vi-settings-light.png)
 

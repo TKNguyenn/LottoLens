@@ -1,6 +1,7 @@
 import csv
 from dataclasses import asdict
 from datetime import datetime, timedelta, timezone
+from email.utils import parsedate_to_datetime
 from html.parser import HTMLParser
 import hashlib
 import io
@@ -18,6 +19,22 @@ from .rules import BASE
 
 class CancelledError(Exception):
     pass
+
+
+class RateLimitError(ValueError):
+    def __init__(self, retry_after=""):
+        now = datetime.now(timezone.utc)
+        self.retry_at = now + timedelta(hours=1)
+        try:
+            requested = (now + timedelta(seconds=int(retry_after)) if re.fullmatch(r"[0-9]+", retry_after)
+                         else parsedate_to_datetime(retry_after))
+            if requested.tzinfo is None:
+                requested = requested.replace(tzinfo=timezone.utc)
+            self.retry_at = max(self.retry_at, requested)
+        except (ValueError, TypeError, OverflowError):
+            pass
+        deadline = self.retry_at.astimezone(timezone(timedelta(hours=7))).isoformat(timespec="seconds")
+        super().__init__("Nguồn Vietlott trả HTTP 429; không thay đổi dữ liệu cũ. Chờ đến " + deadline + ".")
 
 
 class Node:
@@ -161,6 +178,8 @@ class OfficialSource:
             raise ValueError("Số lần kết nối phải từ 1 đến 3.")
         self.cache_dir = Path(cache_dir) if cache_dir else None
         self.max_attempts = max_attempts
+        self._request_interval = 0
+        self._next_request_at = 0
 
     def _cache(self, raw):
         if self.cache_dir:
@@ -177,8 +196,13 @@ class OfficialSource:
             headers.update({"X-AjaxPro-Method": method, "Content-Type": "text/plain; charset=utf-8"})
             data = json.dumps(payload).encode("utf-8")
         for attempt in range(self.max_attempts):
+            while self._request_interval and time.monotonic() < self._next_request_at:
+                if cancel():
+                    raise CancelledError("Đã hủy tải; dữ liệu đang lưu không bị thay đổi.")
+                time.sleep(min(.1, max(0, self._next_request_at - time.monotonic())))
             if cancel():
                 raise CancelledError("Đã hủy tải; dữ liệu đang lưu không bị thay đổi.")
+            self._next_request_at = time.monotonic() + self._request_interval
             try:
                 with urlopen(Request(url, data=data, headers=headers), timeout=15) as response:
                     if urlparse(response.url).hostname not in {"vietlott.vn", "www.vietlott.vn"}:
@@ -189,7 +213,9 @@ class OfficialSource:
                 self._cache(raw)
                 return raw
             except HTTPError as error:
-                if error.code not in (429, 500, 502, 503, 504) or attempt == self.max_attempts - 1:
+                if error.code == 429:
+                    raise RateLimitError(error.headers.get("Retry-After", "") if error.headers else "") from None
+                if error.code not in (500, 502, 503, 504) or attempt == self.max_attempts - 1:
                     raise ValueError(f"Nguồn Vietlott trả HTTP {error.code}; không thay đổi dữ liệu cũ.") from None
                 retry_after = error.headers.get("Retry-After", "")
                 if retry_after and (not retry_after.isdigit() or int(retry_after) > 30):
@@ -225,6 +251,8 @@ class OfficialSource:
         def overlap_index(records):
             return next((i for i, draw in enumerate(records[:limit]) if draw.draw_id in known_ids), None)
 
+        fast = rule.game_id in ("keno", "bingo18")
+        self._request_interval = 2 if fast else 0
         url = BASE+rule.result_path
         raw = self._request(url, cancel=cancel)
         self._cache(raw)

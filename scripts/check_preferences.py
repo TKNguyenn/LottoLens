@@ -12,7 +12,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from PySide6.QtGui import QFontDatabase
 from PySide6.QtWidgets import QApplication
 from PySide6.QtTest import QTest
-from app.ui import Desktop
+from app.ui import APP_GITHUB_URL, Desktop
 from app.domain import Draw
 from app.rules import get_rule, BASE
 from check_redesign import check_page
@@ -40,7 +40,10 @@ def main():
             assert window.pages.count() == window.nav.count() == 8
             assert window.nav.item(7).text() == "Cài đặt"
             assert all(spin.value() == 100 for spin in window.draw_limit_inputs.values())
-            assert not window.github_button.isEnabled()
+            assert window.github_button.isEnabled()
+            with patch("app.ui.QDesktopServices.openUrl") as open_url:
+                window.github_button.click()
+                assert open_url.call_args.args[0].toString() == APP_GITHUB_URL
             assert window.jackpot_card.title.text() == "Jackpot"
             rule = get_rule("mega")
             at = "2026-11-01T11:00:00+00:00"
@@ -122,7 +125,7 @@ def main():
             assert not window.language_choice.isEnabled()
             assert all(not spin.isEnabled() for spin in window.draw_limit_inputs.values())
             release.set(); wait_idle(window)
-            assert window.language_choice.isEnabled() and not window.github_button.isEnabled()
+            assert window.language_choice.isEnabled() and window.github_button.isEnabled()
             assert all(spin.isEnabled() for spin in window.draw_limit_inputs.values())
             window.answer.setPlainText("Không dịch phản hồi AI {raw}")
             assert window.answer.toPlainText() == "Không dịch phản hồi AI {raw}"
@@ -152,7 +155,7 @@ def main():
             assert json.loads((folder / "ui_preferences.json").read_text()) == []
         finally:
             window.close()
-    print("Settings OK: 8 pages, per-game counts/default100, live VI/EN and persistence, write failure, worker locking, disabled GitHub, both themes/languages/sizes/rail states, inputs/generated/raw AI/report retained, no automatic network.")
+    print("Settings OK: 8 pages, per-game counts/default100, live VI/EN and persistence, write failure, worker locking, GitHub link, both themes/languages/sizes/rail states, inputs/generated/raw AI/report retained, no automatic network.")
 
 
 if __name__ == "__main__":
